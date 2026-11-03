@@ -1,0 +1,19 @@
+services:
+  pdfapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./workspace:/workspace
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - Tools__Poppler__PdfToPpmPath=/usr/bin/pdftoppm
+      - Tools__Poppler__PdfToTextPath=/usr/bin/pdftotext
+      - Tools__LibreOffice__SofficePath=/usr/bin/soffice
+      - Tools__Browser__Path=/usr/bin/google-chrome-stable
+      - SAL_USE_VCLPLUGIN=gen
+      - Mcp__ApiKey=${MCP_API_KEY:-}
+      - Mcp__WorkspaceRoot=/workspace
