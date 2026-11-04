@@ -66,12 +66,16 @@ dialog {
   max-height: none;
   overflow: visible;
   border: 1px solid var(--pm-border);
-  border-radius: 10px;
+  border-radius: 16px;
   background: var(--pm-surface);
   color: var(--pm-text);
   box-shadow: 0 12px 48px rgba(10, 16, 30, 0.35);
 }
-dialog::backdrop { background: rgba(10, 16, 30, 0.45); }
+dialog[open] { animation: pm-enter 200ms ease-out; }
+dialog::backdrop { background: rgba(10, 16, 30, 0.45); backdrop-filter: blur(4px); animation: pm-enter 200ms ease-out; }
+.pm-button, .pm-action { transition: background-color 160ms ease, color 160ms ease; }
+@keyframes pm-enter { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { *, *::backdrop { animation: none !important; transition: none !important; } }
 dialog[data-maximized='true'] { border-radius: 0; border-width: 0; }
 .pm-frame { display: flex; flex-direction: column; width: 100%; height: 100%; overflow: hidden; border-radius: inherit; }
 .pm-header { display: flex; align-items: center; gap: 8px; flex-shrink: 0; height: 40px; padding: 0 6px 0 14px; border-bottom: 1px solid var(--pm-border); cursor: move; touch-action: none; user-select: none; }

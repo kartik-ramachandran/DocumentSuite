@@ -317,6 +317,26 @@ test.describe('settings screen', () => {
     await expect(dialog(page)).toHaveCount(0);
   });
 
+  test('appearance follows the system and remembers an explicit theme', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await openPanel(page);
+    const panel = page.locator('.ps-panel');
+    await expect(page.getByRole('region', { name: 'Appearance' })).toBeVisible();
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect(panel).toHaveCSS('background-color', 'rgb(38, 43, 53)');
+    await setting(page, 'theme').selectOption('light');
+    await expect(panel).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await page.reload();
+    await page.locator('summary', { hasText: 'Settings' }).click();
+    await expect(setting(page, 'theme')).toHaveValue('light');
+    await expect(panel).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(panel).toHaveCSS('transition-duration', '0s');
+    await page.getByRole('button', { name: 'Reset to defaults' }).click();
+    await expect(setting(page, 'theme')).toHaveValue('auto');
+    await expect(panel).toHaveCSS('background-color', 'rgb(38, 43, 53)');
+  });
+
   test('a switch takes effect the next time a file opens', async ({ page }) => {
     await openPanel(page);
     await setting(page, 'allowRename').check();

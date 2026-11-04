@@ -134,6 +134,8 @@ test.describe('one toolbar', () => {
   });
 
   test('an active button stays readable under the mouse', async ({ page }) => {
+    // Buttons fade between colors, so this turns that off to compare the colors they settle on.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await openImage(page);
     const button = page.getByRole('button', { name: 'Draw', exact: true });
     const colors = () => button.evaluate((element) => {

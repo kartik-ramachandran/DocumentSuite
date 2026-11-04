@@ -50,10 +50,19 @@ const PANEL_CSS = `
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-.ps-panel { border: 1px solid var(--ps-border); border-radius: 8px; background: var(--ps-surface); }
-.ps-groups { padding: 16px 16px 0; columns: 2 300px; column-gap: 32px; }
+.ps-panel { border: 1px solid var(--ps-border); border-radius: 16px; background: var(--ps-surface); overflow: hidden; box-shadow: 0 8px 32px #10182808; animation: ps-enter 220ms ease-out; }
+.ps-heading { padding: 24px 24px 0; }
+.ps-heading h2 { margin: 0 0 6px; font-size: 20px; font-weight: 650; letter-spacing: -0.5px; }
+.ps-heading p { margin: 0; color: var(--ps-muted); }
+.ps-appearance { margin: 20px 24px 0; padding: 16px; border: 1px solid var(--ps-border); border-radius: 12px; background: color-mix(in srgb, var(--ps-hover) 40%, var(--ps-surface)); }
+.ps-appearance label { border: 0; padding: 0; }
+.ps-appearance label > span { font-weight: 600; }
+.ps-preview { display: flex; gap: 6px; height: 56px; margin-top: 12px; padding: 8px; border: 1px solid var(--ps-border); border-radius: 8px; background: var(--ps-hover); }
+.ps-preview::before { content: ''; width: 20%; border-radius: 4px; background: var(--ps-surface); }
+.ps-preview::after { content: ''; width: 55%; margin: 0 auto; border-radius: 3px; background: var(--ps-surface); box-shadow: 0 2px 6px #10182812; }
+.ps-groups { padding: 24px 24px 8px; columns: 2 300px; column-gap: 32px; }
 fieldset { min-width: 0; margin: 0; padding: 0 0 16px; border: 0; break-inside: avoid; }
-legend { padding: 0 0 8px; font-size: 13px; font-weight: 600; }
+legend { padding: 0 0 10px; font-size: 12px; font-weight: 650; letter-spacing: 0.04em; }
 label { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 40px; padding: 4px 0; border-top: 1px solid var(--ps-border); cursor: pointer; }
 input[type='checkbox'] { position: relative; flex-shrink: 0; width: 32px; height: 18px; margin: 0; border-radius: 9px; background: var(--ps-switch-off); appearance: none; cursor: pointer; transition: background-color 120ms; }
 input[type='checkbox']::before { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--ps-knob); transition: transform 120ms; }
@@ -70,8 +79,19 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
 .ps-status { flex: 1; min-width: 0; color: var(--ps-muted); }
 .ps-status[data-error='true'] { color: #c62828; }
 :host([data-theme='dark']) .ps-status[data-error='true'] { color: #ff8a80; }
-button { min-height: 30px; padding: 0 12px; border: 1px solid var(--ps-border); border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-@media (prefers-reduced-motion: reduce) { input[type='checkbox'], input[type='checkbox']::before { transition: none; } }
+button { min-height: 36px; padding: 0 12px; border: 1px solid var(--ps-border); border-radius: 8px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+select { height: 36px; border-radius: 8px; }
+.ps-panel, .ps-appearance, .ps-preview, .ps-preview::before, .ps-preview::after, label, select, textarea, button, .ps-actions { transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease, box-shadow 180ms ease; }
+button:active { background: var(--ps-hover); }
+@keyframes ps-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 420px) {
+  .ps-heading { padding: 18px 16px 0; }
+  .ps-appearance { margin: 16px 16px 0; }
+  .ps-groups { padding: 20px 16px 4px; }
+  label { gap: 8px; }
+  select { flex-basis: 130px; width: 130px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 `;
 
 function readStored(key: string | undefined): Partial<PdfSuiteSettings> {
@@ -94,6 +114,8 @@ export class SettingsPanel {
   private saves: Promise<void> = Promise.resolve();
   private changedByUser = false;
   private destroyed = false;
+  private readonly systemTheme = window.matchMedia?.('(prefers-color-scheme: dark)');
+  private readonly syncSystemTheme = () => this.sync();
 
   constructor(
     private readonly host: HTMLElement,
@@ -103,6 +125,7 @@ export class SettingsPanel {
     configureViewer(readStored(options.storageKey));
     this.build();
     this.unsubscribe = onViewerSettingsChange(() => this.sync());
+    this.systemTheme?.addEventListener('change', this.syncSystemTheme);
     this.sync();
     void this.loadFromServer();
   }
@@ -115,6 +138,7 @@ export class SettingsPanel {
       void this.saveToServer();
     }
     this.unsubscribe();
+    this.systemTheme?.removeEventListener('change', this.syncSystemTheme);
     this.shadow.replaceChildren();
   }
 
@@ -123,9 +147,26 @@ export class SettingsPanel {
     style.textContent = PANEL_CSS;
     const groups = document.createElement('div');
     groups.className = 'ps-groups';
+    const heading = document.createElement('header');
+    heading.className = 'ps-heading';
+    const title = document.createElement('h2');
+    title.textContent = 'Make it yours';
+    const description = document.createElement('p');
+    description.textContent = 'A comfortable space for your documents.';
+    heading.append(title, description);
+    const appearance = document.createElement('section');
+    appearance.className = 'ps-appearance';
+    appearance.setAttribute('aria-label', 'Appearance');
+    const theme = SETTINGS_SCHEMA.flatMap((group) => group.settings).find((setting) => setting.key === 'theme')!;
+    if (!this.options.exclude?.includes('theme')) {
+      const preview = document.createElement('div');
+      preview.className = 'ps-preview';
+      preview.setAttribute('aria-hidden', 'true');
+      appearance.append(this.buildControl(theme), preview);
+    }
 
     for (const group of SETTINGS_SCHEMA) {
-      const visible = group.settings.filter((setting) => !this.options.exclude?.includes(setting.key));
+      const visible = group.settings.filter((setting) => setting.key !== 'theme' && !this.options.exclude?.includes(setting.key));
       if (visible.length === 0) continue;
 
       const fieldset = document.createElement('fieldset');
@@ -149,6 +190,8 @@ export class SettingsPanel {
     actions.append(this.status, reset);
     const panel = document.createElement('div');
     panel.className = 'ps-panel';
+    panel.append(heading);
+    if (appearance.childElementCount) panel.append(appearance);
     panel.append(groups, actions);
     this.shadow.replaceChildren(style, panel);
   }

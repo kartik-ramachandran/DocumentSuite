@@ -61,8 +61,9 @@ const LIST_CSS = `
 }
 :host([data-theme='dark']) { --pl-surface: #262b35; --pl-text: #e7eaf0; --pl-muted: #a0a8b6; --pl-border: #3a404c; --pl-hover: #333946; --pl-accent: #7ea2f5; }
 * { box-sizing: border-box; }
-ul { margin: 0; padding: 0; list-style: none; border: 1px solid var(--pl-border); border-radius: 8px; background: var(--pl-surface); overflow: hidden; }
-li { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 6px 4px 12px; border-top: 1px solid var(--pl-border); cursor: pointer; }
+ul { margin: 0; padding: 0; list-style: none; border: 1px solid var(--pl-border); border-radius: 12px; background: var(--pl-surface); overflow: hidden; box-shadow: 0 4px 20px #10182806; }
+li { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 10px 8px 16px; border-top: 1px solid var(--pl-border); cursor: pointer; }
+ul, li, .pl-more, .pl-badge { transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease; }
 li:first-child { border-top: 0; }
 li:hover { background: var(--pl-hover); }
 li:focus-visible { outline: 2px solid var(--pl-accent); outline-offset: -2px; }
@@ -76,6 +77,7 @@ li:focus-visible { outline: 2px solid var(--pl-accent); outline-offset: -2px; }
 .pl-more svg { width: 16px; height: 16px; fill: currentColor; }
 .pl-empty { padding: 24px; border: 1px dashed var(--pl-border); border-radius: 8px; color: var(--pl-muted); text-align: center; }
 @media (max-width: 560px) { .pl-meta { display: none; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 `;
 
 function formatSize(bytes: number): string {
