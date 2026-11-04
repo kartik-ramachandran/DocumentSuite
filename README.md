@@ -9,6 +9,7 @@ A self-contained REST API and MCP server for PDF processing. It covers merging, 
 - **PdfLayoutService / PdfLayoutAnalyzer** — read each page's text and images, run OCR on scanned pages, and rebuild reading order, paragraphs and tables
 - **EditableDocumentWriter** — writes that layout as editable DOCX, XLSX and PPTX
 - **PdfCompressionService** — re-encodes images and optimises PDF structure
+- **PdfToolkitService** — page organising, searchable PDFs, redaction, metadata, image extraction, stamps, cropping and forms
 - **PdfToolRunner** — runs Poppler, Tesseract and qpdf with timeouts and cancellation
 - **PdfCompareService** — text diff and visual pixel comparison via PdfPig and SkiaSharp
 - **ValidationAgentService** — outcome validation against original files, output, options, and warnings
@@ -38,9 +39,21 @@ All endpoints accept `multipart/form-data` unless noted.
 | POST | `/api/pdf/split` | Extract specific pages (e.g. `pages=1,3,5-8`) |
 | POST | `/api/pdf/split/inspect` | Return page count + JPEG previews of all pages |
 | POST | `/api/pdf/compress` | Shrink images and optimise structure. `quality` is `less`, `recommended` (default) or `extreme`. Never returns a larger file |
-| POST | `/api/pdf/rotate` | Rotate all pages by `degrees` (multiples of 90) |
-| POST | `/api/pdf/watermark` | Stamp diagonal text watermark on every page |
-| POST | `/api/pdf/page-numbers` | Add `n / total` footer to every page |
+| POST | `/api/pdf/rotate` | Rotate pages by `degrees` (multiples of 90). Optional `pages`, default all |
+| POST | `/api/pdf/watermark` | Stamp a diagonal text watermark on every page. Optional `opacity` (above 0, up to 1) and `fontSize` |
+| POST | `/api/pdf/page-numbers` | Add `n / total` to every page. Optional `position` (`top-left` to `bottom-right`, default `bottom-center`) and `startAt` |
+| POST | `/api/pdf/organize` | Reorder pages. `pages` lists them in output order, such as `3,1,5-8`. Pages not listed are dropped |
+| POST | `/api/pdf/remove-pages` | Delete the listed `pages` |
+| POST | `/api/pdf/split/ranges` | Split into several PDFs, returned as a ZIP. Use `ranges` (`1-3,4,5-9`) or `everyPages` |
+| POST | `/api/pdf/searchable` | Add selectable, searchable text to scanned pages with OCR. `X-Ocr-Page-Count` reports how many pages changed |
+| POST | `/api/pdf/redact` | Permanently remove text. Send one or more `terms`, optional `matchCase`. Matching pages become pictures with black boxes. Returns 422 if nothing matched |
+| POST | `/api/pdf/metadata` | Read title, author, subject, keywords, dates and page count |
+| POST | `/api/pdf/metadata/update` | Set `title`, `author`, `subject` or `keywords`. `clear=true` removes existing metadata first |
+| POST | `/api/pdf/extract-images` | Original embedded pictures, without duplicates, as a ZIP |
+| POST | `/api/pdf/stamp-image` | Draw an `image`, such as a logo or a picture of a signature, at `x`, `y`, `width` in points from the top-left. Optional `pages` |
+| POST | `/api/pdf/crop` | Trim `left`, `right`, `top`, `bottom` margins in points. Optional `pages`. The trimmed content stays in the file, so use redact for secrets |
+| POST | `/api/pdf/forms` | List form fields with their types and values |
+| POST | `/api/pdf/forms/fill` | Fill fields from `values`, a JSON object such as `{"name":"Ada","agree":"true"}`. `flatten=true` makes the values permanent |
 | POST | `/api/pdf/repair` | Re-write corrupt or malformed PDF |
 | POST | `/api/pdf/unlock` | Remove password protection |
 | POST | `/api/pdf/protect` | Add user and owner passwords |
@@ -227,10 +240,10 @@ AI clients can use the service through the [Model Context Protocol](https://mode
 
 | Tool | Purpose |
 |------|---------|
-| `pdf_info` | Page count, size, encryption and whether a PDF has a text layer |
+| `pdf_info` | Page count, size, encryption, title, author, form field count and whether a PDF has a text layer |
 | `pdf_convert` | PDF to docx, xlsx, pptx, txt, html, md, jpg or png |
 | `pdf_create` | Combine pdf, Office, html, md, txt and image files into one PDF |
-| `pdf_edit` | Compress, split, rotate, watermark, add page numbers, repair, protect or unlock |
+| `pdf_edit` | Compress, organize, remove pages, split into files, rotate, watermark, add page numbers, redact, make searchable, extract images, clear metadata, repair, protect or unlock |
 | `pdf_text` | Save the full text to a file, using OCR on scanned pages. `preview_chars` returns some of it inline |
 | `pdf_compare` | Return change counts and save the full report as JSON |
 
@@ -363,6 +376,7 @@ When disabled, the endpoint returns `503` with an explanatory message.
 ## Notes
 
 - The REST API has no authentication — intended for internal/trusted use only
+- Redaction doesn't detect text inside pictures on pages that have a normal text layer, so check those pages by eye. Stamps are visual only, not cryptographic signatures
 - CORS is open (`AllowAnyOrigin`) — lock this down before exposing externally
 - Upload limit is 100 MB per request
 - Office → PDF conversions use LibreOffice, or COM automation when the matching Office app is installed on Windows

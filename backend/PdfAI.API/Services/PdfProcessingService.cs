@@ -7,6 +7,11 @@ namespace PdfAI.API.Services;
 
 public class PdfProcessingService
 {
+    private const double DefaultWatermarkOpacity = 80d / 255;
+    private const double DefaultWatermarkFontSize = 48;
+    private const double PageNumberMargin = 16;
+    private const double PageNumberHeight = 16;
+
     private readonly DocumentConversionService _conversionService;
     private readonly PdfLayoutService _layoutService;
     private readonly PdfCompressionService _compressionService;
@@ -185,12 +190,17 @@ public class PdfProcessingService
         return _conversionService.ConvertImagesToPdf(imageBytes);
     }
 
-    public async Task<byte[]> AddWatermark(byte[] pdfBytes, string watermarkText)
+    public async Task<byte[]> AddWatermark(byte[] pdfBytes, string watermarkText, double opacity = DefaultWatermarkOpacity, double fontSize = DefaultWatermarkFontSize)
     {
         using var inputStream = new MemoryStream(pdfBytes);
         using var document = PdfReader.Open(inputStream, PdfDocumentOpenMode.Modify);
-        var font = new XFont("Arial", 48, XFontStyleEx.Bold);
-        var brush = new XSolidBrush(XColor.FromArgb(80, 80, 80, 80));
+        if (opacity is <= 0 or > 1)
+            throw new ArgumentException("opacity must be above 0 and at most 1.", nameof(opacity));
+        if (fontSize <= 0)
+            throw new ArgumentException("fontSize must be greater than 0.", nameof(fontSize));
+
+        var font = new XFont("Arial", fontSize, XFontStyleEx.Bold);
+        var brush = new XSolidBrush(XColor.FromArgb((int)Math.Round(opacity * 255), 80, 80, 80));
 
         foreach (var page in document.Pages)
         {
@@ -205,7 +215,7 @@ public class PdfProcessingService
         return await Task.FromResult(outputStream.ToArray());
     }
 
-    public async Task<byte[]> RotatePdf(byte[] pdfBytes, int degrees)
+    public async Task<byte[]> RotatePdf(byte[] pdfBytes, int degrees, string? pages = null)
     {
         if (degrees % 90 != 0)
         {
@@ -214,8 +224,12 @@ public class PdfProcessingService
 
         using var inputStream = new MemoryStream(pdfBytes);
         using var document = PdfReader.Open(inputStream, PdfDocumentOpenMode.Modify);
-        foreach (var page in document.Pages)
+        var selected = string.IsNullOrWhiteSpace(pages)
+            ? Enumerable.Range(1, document.PageCount)
+            : PageSelection.Parse(pages, document.PageCount).Distinct();
+        foreach (var number in selected)
         {
+            var page = document.Pages[number - 1];
             page.Rotate = NormalizeRotation(page.Rotate + degrees);
         }
 
@@ -224,10 +238,23 @@ public class PdfProcessingService
         return await Task.FromResult(outputStream.ToArray());
     }
 
-    public byte[] AddPageNumbers(byte[] pdfBytes)
+    /// <param name="position">top-left, top-center, top-right, bottom-left, bottom-center or bottom-right.</param>
+    /// <param name="startAt">The number shown on the first page.</param>
+    public byte[] AddPageNumbers(byte[] pdfBytes, string position = "bottom-center", int startAt = 1)
     {
         using var inputStream = new MemoryStream(pdfBytes);
         using var document = PdfReader.Open(inputStream, PdfDocumentOpenMode.Modify);
+        var (isTop, format) = position.ToLowerInvariant() switch
+        {
+            "top-left" => (true, XStringFormats.CenterLeft),
+            "top-center" => (true, XStringFormats.Center),
+            "top-right" => (true, XStringFormats.CenterRight),
+            "bottom-left" => (false, XStringFormats.CenterLeft),
+            "bottom-center" => (false, XStringFormats.Center),
+            "bottom-right" => (false, XStringFormats.CenterRight),
+            _ => throw new ArgumentException($"Unknown position '{position}'. Use top-left, top-center, top-right, bottom-left, bottom-center or bottom-right.", nameof(position))
+        };
+
         var font = new XFont("Arial", 9);
         var brush = XBrushes.DarkSlateGray;
 
@@ -235,8 +262,9 @@ public class PdfProcessingService
         {
             var page = document.Pages[index];
             using var graphics = XGraphics.FromPdfPage(page, XGraphicsPdfPageOptions.Append);
-            var label = $"{index + 1} / {document.Pages.Count}";
-            graphics.DrawString(label, font, brush, new XRect(0, page.Height.Point - 32, page.Width.Point, 16), XStringFormats.Center);
+            var label = $"{index + startAt} / {document.Pages.Count + startAt - 1}";
+            var top = isTop ? PageNumberMargin : page.Height.Point - PageNumberMargin - PageNumberHeight;
+            graphics.DrawString(label, font, brush, new XRect(PageNumberMargin, top, page.Width.Point - PageNumberMargin * 2, PageNumberHeight), format);
         }
 
         using var outputStream = new MemoryStream();

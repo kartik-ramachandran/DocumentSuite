@@ -20,20 +20,22 @@ public sealed class PdfMcpTools
     private const int MaxDpi = 600;
     private const int MaxPreviewChars = 2000;
     private const int PagesCheckedForText = 5;
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
 
     private readonly PdfProcessingService _pdf;
     private readonly PdfCompareService _compare;
+    private readonly PdfToolkitService _toolkit;
     private readonly McpWorkspace _workspace;
 
-    public PdfMcpTools(PdfProcessingService pdf, PdfCompareService compare, McpWorkspace workspace)
+    public PdfMcpTools(PdfProcessingService pdf, PdfCompareService compare, PdfToolkitService toolkit, McpWorkspace workspace)
     {
         _pdf = pdf;
         _compare = compare;
+        _toolkit = toolkit;
         _workspace = workspace;
     }
 
-    [McpServerTool(Name = "pdf_info"), Description("Page count, size, encryption and whether a PDF has a text layer.")]
+    [McpServerTool(Name = "pdf_info"), Description("Page count, size, encryption, title, author, form field count and whether a PDF has a text layer.")]
     public Task<string> Info(string input, CancellationToken cancellationToken) => Run(async () =>
     {
         var bytes = await _workspace.ReadAsync(input, cancellationToken);
@@ -41,9 +43,10 @@ public sealed class PdfMcpTools
         {
             using var document = PdfDocument.Open(bytes);
             var hasText = document.GetPages().Take(PagesCheckedForText).Any(page => page.Letters.Count > 0);
-            return new { pages = document.NumberOfPages, bytes = bytes.Length, encrypted = false, hasText };
+            var metadata = _toolkit.ReadMetadata(bytes);
+            return new { pages = document.NumberOfPages, bytes = bytes.Length, encrypted = false, hasText, title = metadata.Title, author = metadata.Author, formFields = _toolkit.ListFormFields(bytes).Count };
         }
-        catch (Exception ex) when (ex.GetType().Name.Contains("Encrypt", StringComparison.OrdinalIgnoreCase))
+        catch (Exception ex) when (ex.GetType().Name.Contains("Encrypt", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("password", StringComparison.OrdinalIgnoreCase))
         {
             return (object)new { bytes = bytes.Length, encrypted = true };
         }
@@ -87,7 +90,7 @@ public sealed class PdfMcpTools
         return await Save(output, inputs[0], "pdf", content, cancellationToken);
     });
 
-    [McpServerTool(Name = "pdf_edit"), Description("Edit a PDF. action: compress (quality: less|recommended|extreme), split (pages: 1,3,5-8), rotate (degrees), watermark (text), page_numbers, repair, protect (password, owner_password), unlock (password).")]
+    [McpServerTool(Name = "pdf_edit"), Description("Edit a PDF. action: compress (quality: less|recommended|extreme), split or organize (pages in output order: 3,1,5-8), remove_pages (pages), split_files (pages: 1-3,4-6, gives a zip), rotate (degrees, pages), watermark (text), page_numbers, redact (terms; permanent), searchable (OCR scans into selectable text), extract_images (gives a zip), clear_metadata, repair, protect (password, owner_password), unlock (password).")]
     public Task<string> Edit(
         string input,
         string action,
@@ -96,26 +99,47 @@ public sealed class PdfMcpTools
         string? pages = null,
         int degrees = 90,
         string? text = null,
+        string[]? terms = null,
         string? password = null,
         string? owner_password = null,
         CancellationToken cancellationToken = default) => Run(async () =>
     {
         var bytes = await _workspace.ReadAsync(input, cancellationToken);
-        var content = action.Trim().ToLowerInvariant() switch
+        var name = action.Trim().ToLowerInvariant();
+        object? extra = null;
+        var extension = "pdf";
+        byte[] content;
+        switch (name)
         {
-            "compress" => await _pdf.CompressPdf(bytes, quality ?? "recommended", cancellationToken),
-            "split" => await _pdf.ExtractPdfPages(bytes, ParsePages(pages)),
-            "rotate" => await _pdf.RotatePdf(bytes, degrees),
-            "watermark" => await _pdf.AddWatermark(bytes, Require(text, "text")),
-            "page_numbers" => _pdf.AddPageNumbers(bytes),
-            "repair" => _pdf.RepairPdf(bytes),
-            "protect" => _pdf.ProtectPdf(bytes, Require(password, "password"), owner_password ?? Require(password, "password")),
-            "unlock" => _pdf.UnlockPdf(bytes, password),
-            _ => throw new ArgumentException($"Unknown action '{action}'.")
-        };
+            case "compress": content = await _pdf.CompressPdf(bytes, quality ?? "recommended", cancellationToken); break;
+            case "split" or "organize": content = _toolkit.OrganizePages(bytes, pages); break;
+            case "remove_pages": content = _toolkit.RemovePages(bytes, pages); break;
+            case "split_files": content = _toolkit.SplitIntoFiles(bytes, pages, null); extension = "zip"; break;
+            case "rotate": content = await _pdf.RotatePdf(bytes, degrees, pages); break;
+            case "watermark": content = await _pdf.AddWatermark(bytes, Require(text, "text")); break;
+            case "page_numbers": content = _pdf.AddPageNumbers(bytes); break;
+            case "repair": content = _pdf.RepairPdf(bytes); break;
+            case "protect": content = _pdf.ProtectPdf(bytes, Require(password, "password"), owner_password ?? Require(password, "password")); break;
+            case "unlock": content = _pdf.UnlockPdf(bytes, password); break;
+            case "clear_metadata": content = _toolkit.UpdateMetadata(bytes, null, null, null, null, clear: true); break;
+            case "extract_images": content = _toolkit.ExtractImages(bytes); extension = "zip"; break;
+            case "redact":
+                var redacted = await _toolkit.RedactAsync(bytes, terms ?? [], cancellationToken: cancellationToken);
+                content = redacted.Pdf;
+                extra = new { redacted.RedactedWords, redacted.RedactedPages };
+                break;
+            case "searchable":
+                var searchable = await _toolkit.MakeSearchableAsync(bytes, cancellationToken);
+                content = searchable.Pdf;
+                extra = new { searchable.OcrPages };
+                break;
+            default:
+                throw new ArgumentException($"Unknown action '{action}'.");
+        }
 
-        var defaultName = Path.Combine(Path.GetDirectoryName(input) ?? string.Empty, $"{Path.GetFileNameWithoutExtension(input)}_{action.Trim().ToLowerInvariant()}.pdf");
-        return await Save(output, defaultName, "pdf", content, cancellationToken);
+        var defaultName = Path.Combine(Path.GetDirectoryName(input) ?? string.Empty, $"{Path.GetFileNameWithoutExtension(input)}_{name}.{extension}");
+        var saved = await _workspace.WriteAsync(output, defaultName, extension, content, cancellationToken);
+        return new { output = saved, bytes = content.Length, details = extra };
     });
 
     [McpServerTool(Name = "pdf_text"), Description("Save a PDF's full text to a file, using OCR on scanned pages. Set preview_chars only if you need some of the text inline.")]
@@ -172,21 +196,6 @@ public sealed class PdfMcpTools
 
     private static string Require(string? value, string name) =>
         string.IsNullOrEmpty(value) ? throw new ArgumentException($"{name} is required for this action.") : value;
-
-    private static List<int> ParsePages(string? pages)
-    {
-        var selected = new SortedSet<int>();
-        foreach (var part in Require(pages, "pages").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var range = part.Split('-', StringSplitOptions.TrimEntries);
-            if (range.Length > 2 || !int.TryParse(range[0], out var first) || !int.TryParse(range[^1], out var last) || first < 1 || last < first)
-                throw new ArgumentException($"Invalid page selection '{part}'.");
-            for (var page = first; page <= last; page++)
-                selected.Add(page);
-        }
-
-        return selected.ToList();
-    }
 
     // The MCP SDK hides ordinary exception messages from the client, so they're passed on to let the model correct itself.
     private static async Task<string> Run<T>(Func<Task<T>> action)

@@ -9,7 +9,8 @@ public sealed record LayoutWord(
     bool Bold = false,
     bool Italic = false,
     string? FontName = null,
-    string? ColorHex = null)
+    string? ColorHex = null,
+    bool IsPositioned = true)
 {
     public double Top => Baseline - FontSize * 0.8;
     public double Bottom => Baseline + FontSize * 0.2;
@@ -61,7 +62,23 @@ public sealed record TableBlock(double Top, double Left, IReadOnlyList<double> C
 
 public sealed record ImageBlock(LayoutImage Image) : LayoutBlock(Image.Top);
 
-public sealed record LayoutPage(int Number, double Width, double Height, IReadOnlyList<LayoutBlock> Blocks, bool WasOcr);
+public sealed record LayoutPage(int Number, double Width, double Height, IReadOnlyList<LayoutBlock> Blocks, bool WasOcr, bool IsRotated = false)
+{
+    /// <summary>Every word on the page in reading order.</summary>
+    public List<LayoutWord> AllWords()
+    {
+        var words = new List<LayoutWord>();
+        foreach (var block in Blocks)
+        {
+            if (block is ParagraphBlock paragraph)
+                words.AddRange(paragraph.Lines.SelectMany(line => line.Segments).SelectMany(segment => segment.Words));
+            else if (block is TableBlock table)
+                words.AddRange(table.Rows.SelectMany(row => row).SelectMany(cell => cell.Words));
+        }
+
+        return words;
+    }
+}
 
 internal static class LayoutMath
 {

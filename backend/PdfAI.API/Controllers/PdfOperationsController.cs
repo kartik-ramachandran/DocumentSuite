@@ -83,11 +83,11 @@ public class PdfOperationsController : PdfBaseController
     }
 
     [HttpPost("rotate")]
-    public async Task<IActionResult> RotatePdf(IFormFile file, [FromForm] int degrees = 90)
+    public async Task<IActionResult> RotatePdf(IFormFile file, [FromForm] int degrees = 90, [FromForm] string? pages = null)
     {
         try
         {
-            var result = await _pdfService.RotatePdf(await ReadBytes(file), degrees);
+            var result = await _pdfService.RotatePdf(await ReadBytes(file), degrees, pages);
             return File(result, "application/pdf", "rotated.pdf");
         }
         catch (Exception ex)
@@ -98,11 +98,11 @@ public class PdfOperationsController : PdfBaseController
     }
 
     [HttpPost("watermark")]
-    public async Task<IActionResult> AddWatermark(IFormFile file, [FromForm] string text)
+    public async Task<IActionResult> AddWatermark(IFormFile file, [FromForm] string text, [FromForm] double opacity = 0.31, [FromForm] double fontSize = 48)
     {
         try
         {
-            var result = await _pdfService.AddWatermark(await ReadBytes(file), text);
+            var result = await _pdfService.AddWatermark(await ReadBytes(file), text, opacity, fontSize);
             return File(result, "application/pdf", "watermarked.pdf");
         }
         catch (Exception ex)
@@ -113,11 +113,11 @@ public class PdfOperationsController : PdfBaseController
     }
 
     [HttpPost("page-numbers")]
-    public async Task<IActionResult> AddPageNumbers(IFormFile file)
+    public async Task<IActionResult> AddPageNumbers(IFormFile file, [FromForm] string position = "bottom-center", [FromForm] int startAt = 1)
     {
         try
         {
-            var result = _pdfService.AddPageNumbers(await ReadBytes(file));
+            var result = _pdfService.AddPageNumbers(await ReadBytes(file), position, startAt);
             return File(result, "application/pdf", "numbered.pdf");
         }
         catch (Exception ex)

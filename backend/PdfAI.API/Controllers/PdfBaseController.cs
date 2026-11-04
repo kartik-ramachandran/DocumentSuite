@@ -9,6 +9,8 @@ namespace PdfAI.API.Controllers;
 [Consumes("multipart/form-data")]
 public abstract class PdfBaseController : ControllerBase
 {
+    private const int MaxPagesInRange = 100_000;
+
     protected static async Task<byte[]> ReadBytes(IFormFile file)
     {
         using var stream = new MemoryStream();
@@ -36,6 +38,8 @@ public abstract class PdfBaseController : ControllerBase
                 var range = part.Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 if (range.Length != 2 || !int.TryParse(range[0], out var start) || !int.TryParse(range[1], out var end) || start <= 0 || end < start)
                     throw new ArgumentException($"Invalid page range '{part}'.");
+                if (end - start >= MaxPagesInRange)
+                    throw new ArgumentException($"Page range '{part}' is too large.");
 
                 for (var page = start; page <= end; page++)
                     selected.Add(page);

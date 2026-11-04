@@ -109,7 +109,8 @@ public class DocumentConversionService
 
     public byte[] ConvertPdfToText(byte[] pdfBytes)
     {
-        var executable = _configuration["Tools:Poppler:PdfToTextPath"] ?? GetSiblingToolPath("pdftotext");
+        var configuredPath = _configuration["Tools:Poppler:PdfToTextPath"];
+        var executable = string.IsNullOrWhiteSpace(configuredPath) ? GetSiblingToolPath("pdftotext") : configuredPath;
         var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-text-");
         var inputPath = Path.Combine(tempDirectory.FullName, "input.pdf");
         var outputPath = Path.Combine(tempDirectory.FullName, "converted.txt");

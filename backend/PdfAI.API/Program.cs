@@ -32,7 +32,8 @@ builder.Services.AddCors(options =>
     {
         policy.AllowAnyOrigin()
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .WithExposedHeaders("X-Ocr-Page-Count", "X-Redacted-Word-Count", "X-Redacted-Page-Count");
     });
 });
 
@@ -89,6 +90,7 @@ static void AddPdfServices(IServiceCollection services)
     services.AddScoped<PdfToolRunner>();
     services.AddScoped<PdfLayoutService>();
     services.AddScoped<PdfCompressionService>();
+    services.AddScoped<PdfToolkitService>();
     services.AddScoped<DocumentExtractionService>();
     services.AddScoped<DocumentConversionService>();
     services.AddScoped<PdfProcessingService>();

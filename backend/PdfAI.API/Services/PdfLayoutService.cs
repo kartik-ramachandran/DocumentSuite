@@ -95,6 +95,19 @@ public partial class PdfLayoutService
         return text.ToString();
     }
 
+    public List<int> FindPagesNeedingOcr(byte[] pdfBytes)
+    {
+        using var document = PdfDocument.Open(pdfBytes);
+        return document.GetPages()
+            .Where(page => NeedsOcr(page, page.Letters.Count(letter => !string.IsNullOrWhiteSpace(letter.Value))))
+            .Select(page => page.Number)
+            .ToList();
+    }
+
+    // A page with no pictures or drawings has nothing OCR could read.
+    private static bool NeedsOcr(Page page, int letterCount) =>
+        letterCount < MinNativeLetters && (page.NumberOfImages > 0 || page.Paths.Count > 0);
+
     private List<PageScan> ReadPages(byte[] pdfBytes, bool includeImages, CancellationToken cancellationToken)
     {
         var scans = new List<PageScan>();
@@ -109,8 +122,8 @@ public partial class PdfLayoutService
             var frame = TextFrame.Detect(letters, page.Width, page.Height);
             var scan = new PageScan(page.Number, frame.Width, frame.Height)
             {
-                // A page with no pictures or drawings has nothing OCR could read.
-                NeedsOcr = letters.Count < MinNativeLetters && (page.NumberOfImages > 0 || page.Paths.Count > 0),
+                IsRotated = frame.IsRotated,
+                NeedsOcr = NeedsOcr(page, letters.Count),
                 // A hidden text layer sits over a scan, so the picture would duplicate the text.
                 HasHiddenTextLayer = letters.Count >= MinNativeLetters && invisible > letters.Count / 2,
                 Words = ReadWords(letters, frame)
@@ -145,7 +158,7 @@ public partial class PdfLayoutService
             var bottom = words.Count > 0 ? words.Max(word => word.Baseline) : 0;
             var size = Math.Max(otherText[0].PointSize, 8);
             var text = string.Concat(otherText.Select(letter => letter.Value));
-            words.Add(new LayoutWord(text, 36, 36 + text.Length * size * 0.5, bottom + size * 2, size, FontName: CleanFontName(otherText[0].FontName)));
+            words.Add(new LayoutWord(text, 36, 36 + text.Length * size * 0.5, bottom + size * 2, size, FontName: CleanFontName(otherText[0].FontName), IsPositioned: false));
         }
 
         return words;
@@ -341,7 +354,7 @@ public partial class PdfLayoutService
         var isScan = scan.HasHiddenTextLayer || (scan.WasOcr && scan.Words.Count >= MinScanWords);
         var coversPage = scan.ImageArea >= scan.Width * scan.Height * 0.6;
         var images = isScan && coversPage ? [] : scan.Images;
-        return new LayoutPage(scan.Number, scan.Width, scan.Height, PdfLayoutAnalyzer.BuildBlocks(scan.Words, images, scan.Width), scan.WasOcr);
+        return new LayoutPage(scan.Number, scan.Width, scan.Height, PdfLayoutAnalyzer.BuildBlocks(scan.Words, images, scan.Width), scan.WasOcr, scan.IsRotated);
     }
 
     [GeneratedRegex("bold|black|heavy|demi|semibold", RegexOptions.IgnoreCase)]
@@ -401,6 +414,7 @@ public partial class PdfLayoutService
         public double Width { get; } = width;
         public double Height { get; } = height;
         public bool NeedsOcr { get; init; }
+        public bool IsRotated { get; init; }
         public bool HasHiddenTextLayer { get; init; }
         public bool WasOcr { get; set; }
         public double ImageArea { get; set; }
