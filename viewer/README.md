@@ -212,6 +212,10 @@ In Vue it's `<PdfViewer source="/report.pdf" />` too, and in Angular `<pdf-suite
 
 Both can also be controlled from code, which the [API section](#api) covers.
 
+### Need a hand?
+
+PDF Suite is free and open for anyone to use. If you get stuck, **[ask for setup help](https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
+
 ## Viewing files in a modal
 
 `FileList` shows your files. Clicking one opens it in a modal that can be resized from any edge or corner, moved by its title bar and maximized. Right-clicking shows a menu with **Open**, **Download** and your own actions.

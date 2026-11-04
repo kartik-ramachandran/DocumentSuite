@@ -6,7 +6,7 @@ Open-source PDF tools you run yourself: a REST API, an MCP server for AI clients
 
 Everything runs on your own infrastructure, so documents stay with you. The one exception is the optional AI review, which is off by default and sends documents to the Azure OpenAI service you configure.
 
-**[Try the viewer live](https://kartik-ramachandran.github.io/PDFSuite/#try)**, with nothing to install · **[Add it to your app](viewer/README.md#add-it-to-your-app)** · **[Website](https://kartik-ramachandran.github.io/PDFSuite/)**
+**[Try the viewer live](https://kartik-ramachandran.github.io/PDFSuite/#try)**, with nothing to install · **[Add it to your app](viewer/README.md#add-it-to-your-app)** · **[Website](https://kartik-ramachandran.github.io/PDFSuite/)** · **[Get setup help](https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml)**
 
 ![A file opening from a list, being annotated, and the settings moving the toolbar](docs/screenshots/demo.gif)
 
@@ -83,6 +83,10 @@ npm run preview -w example-react
 Then open http://localhost:5173. The list has sample files to click on, and **Settings** above it lets you try every option. There are also `example-vue` and `example-angular` demos.
 
 > **Don't expose this to the internet as it stands.** The REST API has no login or rate limits. Read [SECURITY.md](SECURITY.md) before deploying it.
+
+## Need help setting it up?
+
+PDF Suite is free and open for anyone to use, and there's nothing to buy. If you'd like a hand getting it running, **[ask for setup help](https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
 
 ## Project status
 

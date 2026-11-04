@@ -1,0 +1,43 @@
+name: Ask for setup help
+description: Get a hand adding PDF Suite to your app, or running the API or MCP server.
+title: "Setup help: "
+labels: ["setup help"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        PDF Suite is free and open for anyone to use, and there's nothing to buy. Tell us what you're setting up, and Kartik will get in touch here.
+
+        **This page is public.** Please don't include confidential documents, passwords or API keys.
+  - type: dropdown
+    id: part
+    attributes:
+      label: What are you setting up?
+      multiple: true
+      options:
+        - Viewer in React
+        - Viewer in Vue
+        - Viewer in Angular
+        - Viewer in plain JavaScript
+        - REST API
+        - MCP server for AI clients
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What do you want it to do?
+      description: For example, "Show uploaded contracts in our React app, and let staff annotate them."
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Where will it run?
+      description: Your framework versions, and where you host, such as Docker, Azure or AWS.
+  - type: textarea
+    id: stuck
+    attributes:
+      label: Where are you stuck, if you've started?
+      description: What you tried, and any error messages.
