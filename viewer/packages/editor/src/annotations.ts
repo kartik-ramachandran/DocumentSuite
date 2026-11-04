@@ -101,7 +101,8 @@ export class AnnotationController {
       context.viewer.on('documentLoaded', () => this.resetForNewDocument()),
     );
     context.root.addEventListener('keydown', (event) => this.handleKey(event as KeyboardEvent));
-    context.addPrintPainter((canvas, pageNumber) => this.paintForPrint(canvas, pageNumber));
+    context.addPrintPainter((canvas, pageNumber, _size, target) => this.paintForPrint(canvas, pageNumber, target));
+    context.addImageChangeCheck(() => this.annotations.length > 0);
   }
 
   destroy(): void {
@@ -267,6 +268,8 @@ export class AnnotationController {
     host.append(svg);
     this.layers.set(pageNumber, { svg, host, size });
     svg.addEventListener('pointerdown', (event) => this.handlePointerDown(event, pageNumber));
+    // While a tool is active, a double click belongs to the tool, not the image viewer's zoom.
+    svg.addEventListener('dblclick', (event) => event.stopPropagation());
     this.renderPage(pageNumber);
   }
 
@@ -281,6 +284,8 @@ export class AnnotationController {
     if (event.button !== 0 || !this.tool) return;
     const layer = this.layers.get(pageNumber)!;
     event.preventDefault();
+    // On images, this stops the viewer underneath dragging the picture while a tool is in use.
+    event.stopPropagation();
     const start = this.toPagePoint(event, layer.svg);
 
     switch (this.tool) {
@@ -575,7 +580,7 @@ export class AnnotationController {
         });
         break;
       case 'note': {
-        add('path', { d: `M${annotation.x} ${annotation.y}h${NOTE_SIZE}v${NOTE_SIZE * 0.7}h-${NOTE_SIZE * 0.6}l-${NOTE_SIZE * 0.25} ${NOTE_SIZE * 0.3}v-${NOTE_SIZE * 0.3}h-${NOTE_SIZE * 0.15}z`, fill: annotation.color, stroke: '#7a5200', 'stroke-width': 0.7 });
+        add('path', { d: notePath(annotation.x, annotation.y), fill: annotation.color, stroke: '#7a5200', 'stroke-width': 0.7 });
         const title = add('title', {});
         title.textContent = annotation.text;
         break;
@@ -587,7 +592,7 @@ export class AnnotationController {
     return group;
   }
 
-  private async paintForPrint(context: CanvasRenderingContext2D, pageNumber: number): Promise<void> {
+  private async paintForPrint(context: CanvasRenderingContext2D, pageNumber: number, target: 'print' | 'image'): Promise<void> {
     for (const annotation of this.annotations) {
       if (annotation.page !== pageNumber) continue;
       context.save();
@@ -596,7 +601,8 @@ export class AnnotationController {
       switch (annotation.kind) {
         case 'highlight':
           context.globalAlpha = 0.4;
-          context.globalCompositeOperation = 'multiply';
+          // Paper is white, so multiplying looks like a real highlighter. On a photo it would turn dark, unlike the view on screen.
+          if (target === 'print') context.globalCompositeOperation = 'multiply';
           for (const rect of annotation.rects) context.fillRect(rect.x, rect.y, rect.width, rect.height);
           break;
         case 'ink':
@@ -618,7 +624,9 @@ export class AnnotationController {
           annotation.text.split('\n').forEach((line, index) => context.fillText(line, annotation.x, annotation.y + annotation.fontSize * (0.9 + index * 1.2)));
           break;
         case 'note':
-          context.fillRect(annotation.x, annotation.y, NOTE_SIZE, NOTE_SIZE * 0.7);
+          context.fill(new Path2D(notePath(annotation.x, annotation.y)));
+          // An image can't hold a real comment, so its text is drawn beside the icon instead of being lost.
+          if (target === 'image') drawNoteText(context, annotation.text, annotation.x + NOTE_SIZE + 3, annotation.y);
           break;
         case 'stamp': {
           const image = new Image();
@@ -631,6 +639,22 @@ export class AnnotationController {
       context.restore();
     }
   }
+}
+
+function notePath(x: number, y: number): string {
+  return `M${x} ${y}h${NOTE_SIZE}v${NOTE_SIZE * 0.7}h-${NOTE_SIZE * 0.6}l-${NOTE_SIZE * 0.25} ${NOTE_SIZE * 0.3}v-${NOTE_SIZE * 0.3}h-${NOTE_SIZE * 0.15}z`;
+}
+
+function drawNoteText(context: CanvasRenderingContext2D, text: string, x: number, y: number): void {
+  const size = 11;
+  const padding = 3;
+  const lines = text.split('\n');
+  context.font = `${size}px Helvetica, Arial, sans-serif`;
+  const width = Math.max(...lines.map((line) => context.measureText(line).width));
+  context.fillStyle = '#fff4cc';
+  context.fillRect(x, y, width + padding * 2, lines.length * size * 1.2 + padding * 2);
+  context.fillStyle = '#1c2230';
+  lines.forEach((line, index) => context.fillText(line, x + padding, y + padding + size * (0.9 + index * 1.2)));
 }
 
 function moveAnnotation(annotation: Annotation, dx: number, dy: number): Annotation {

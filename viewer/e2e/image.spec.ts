@@ -88,17 +88,18 @@ test('hides tools that only apply to PDFs', async ({ page }) => {
   await expect(page.getByLabel('Find in document')).toBeVisible();
   await openImage(page, 'photo.png');
 
-  for (const name of ['Next page', 'Search', 'Draw', 'Highlight text', 'Rotate view', 'Toggle side panel']) {
+  for (const name of ['Next page', 'Previous page', 'Search']) {
     await expect(page.getByRole('button', { name, exact: true })).toBeHidden();
   }
+  await expect(page.getByLabel('Page number')).toBeHidden();
   await expect(page.getByLabel('Find in document')).toBeHidden();
-  await expect(page.locator('.pv-sidebar')).toBeHidden();
-  for (const name of ['Open file', 'Print', 'Download']) {
+  await expect(page.getByRole('button', { name: 'Go to page 1' })).toHaveCount(0);
+  for (const name of ['Open file', 'Print', 'Download', 'Zoom in', 'Zoom out', 'Rotate view', 'Draw', 'Highlight text', 'Toggle side panel']) {
     await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
   }
 });
 
-test('zooms, rotates and flips with the image toolbar', async ({ page }) => {
+test('zooms, rotates and flips from the main toolbar', async ({ page }) => {
   await openImage(page, 'photo.png');
   const width = () => shownImage(page).evaluate((image) => image.getBoundingClientRect().width);
   const start = await width();
@@ -106,10 +107,10 @@ test('zooms, rotates and flips with the image toolbar', async ({ page }) => {
   await page.getByRole('button', { name: 'Zoom in' }).click();
   await expect.poll(width).toBeGreaterThan(start);
 
-  await page.getByRole('button', { name: 'Fit to view' }).click();
-  await expect.poll(async () => Math.round(await width())).toBe(Math.round(start));
+  await page.getByRole('button', { name: 'Actual size' }).click();
+  await expect.poll(async () => Math.round(await width())).toBe(320);
 
-  await page.getByRole('button', { name: 'Rotate right' }).click();
+  await page.getByRole('button', { name: 'Rotate view' }).click();
   await expect.poll(() => shownImage(page).evaluate((image) => image.style.transform)).toContain('rotate(90deg)');
 
   await page.getByRole('button', { name: 'Flip horizontally' }).click();
@@ -157,7 +158,7 @@ test('adjusts when the window size changes', async ({ page }) => {
     const box = (await page.locator('.pv-image .viewer-container').boundingBox())!;
     return box.width;
   }).toBeLessThanOrEqual(500);
-  await page.getByRole('button', { name: 'Fit to view' }).click();
+  await page.getByLabel('Zoom level').selectOption('fit-page');
   await expect.poll(async () => (await shownImage(page).boundingBox())!.width).toBeLessThanOrEqual(500);
 });
 

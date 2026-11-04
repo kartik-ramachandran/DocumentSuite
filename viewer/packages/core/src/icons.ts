@@ -11,4 +11,8 @@ export const ICONS = {
   download: '<path d="M12 3v12M7 11l5 5 5-5M4 21h16"/>',
   open: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  rotateLeft: '<path d="M4 11a8 8 0 1 1 2.3 6.3"/><path d="M4 5v6h6"/>',
+  flipHorizontal: '<path d="M12 3v18"/><path d="m8 7-5 5 5 5zM16 7l5 5-5 5z"/>',
+  flipVertical: '<path d="M3 12h18"/><path d="m7 8 5-5 5 5zM7 16l5 5 5-5z"/>',
+  actualSize: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 10v5M16 10v5M12 10.5v.01M12 14.5v.01"/>',
 };

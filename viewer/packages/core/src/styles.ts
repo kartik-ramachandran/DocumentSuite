@@ -38,7 +38,7 @@ export const VIEWER_CSS = `
 .pv-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 32px; height: 32px; padding: 0 6px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .pv-btn:hover:not(:disabled) { background: var(--pv-hover); }
 .pv-btn:disabled { opacity: 0.4; cursor: default; }
-.pv-btn[aria-pressed='true'] { background: var(--pv-accent); color: var(--pv-accent-text); }
+.pv-btn[aria-pressed='true'], .pv-btn[aria-pressed='true']:hover:not(:disabled) { background: var(--pv-accent); color: var(--pv-accent-text); }
 .pv-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .pv-btn:focus-visible, .pv-input:focus-visible, .pv-select:focus-visible, .pv-thumb:focus-visible { outline: 2px solid var(--pv-accent); outline-offset: 1px; }
 .pv-primary { background: var(--pv-accent); color: var(--pv-accent-text); padding: 0 12px; }
@@ -89,7 +89,11 @@ export const VIEWER_CSS = `
 .pv-dialog .pv-input, .pv-dialog .pv-select { width: 100%; color: var(--pv-text); }
 .pv-dialog-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .pv-file-input { display: none; }
-.pv-root[data-kind='image'] [data-pdf-only], .pv-root[data-kind='image'] .pv-sidebar, .pv-root[data-kind='image'] .pv-searchbar, .pv-root[data-kind='image'] .pv-scroll { display: none !important; }
+[hidden] { display: none !important; }
+.pv-root[data-kind='image'] [data-pdf-only], .pv-root[data-kind='image'] .pv-searchbar, .pv-root[data-kind='image'] .pv-scroll { display: none !important; }
+.pv-root:not([data-kind='image']) [data-image-only] { display: none !important; }
+.pv-image-host { display: none; position: relative; flex: 1; min-width: 0; }
+.pv-root[data-kind='image'] .pv-image-host { display: block; }
 @media (max-width: 560px) {
   .pv-sidebar[data-open='true'] { position: absolute; inset: 0 auto 0 0; z-index: 6; box-shadow: var(--pv-page-shadow); }
   .pv-hide-small { display: none; }

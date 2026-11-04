@@ -32,7 +32,11 @@ const ZOOM_RERENDER_DELAY_MS = 150;
 const SEARCH_DELAY_MS = 200;
 const PRINT_SCALE = 2;
 const TOAST_MS = 4000;
-const IMAGE_ZOOM_STEP = 0.25;
+// Large images are annotated at this size, so lines and text stay in proportion on any photo.
+// Smaller images use their real pixels, because scaling them up would make lines blur when saved.
+const IMAGE_MAX_LOGICAL_SIZE = 800;
+// Tiny images such as icons are annotated, and saved, at this size so that the marks stay readable.
+const IMAGE_MIN_LOGICAL_SIZE = 256;
 
 interface PageView {
   number: number;
@@ -57,6 +61,10 @@ export class PdfViewer {
   private readonly service: ServiceClient;
   private readonly exportSteps: ExportStep[] = [];
   private readonly printPainters: PrintPainter[] = [];
+  private readonly imageChangeChecks: Array<() => boolean> = [];
+  private readonly imageHost: HTMLElement;
+  private imageSize: PageSize = { width: 0, height: 0 };
+  private currentPanel = 'pages';
   private readonly controls: Record<string, HTMLElement> = {};
   private readonly textCache = new Map<number, TextRun[]>();
   private readonly mainGroup: HTMLElement;
@@ -77,7 +85,6 @@ export class PdfViewer {
   private imageBytes: Uint8Array | null = null;
   private imageStylesAdded = false;
   private imageMimeType = 'image/png';
-  private readonly body: HTMLElement;
   private pageViews: PageView[] = [];
   private pageObserver: IntersectionObserver | null = null;
   private thumbObserver: IntersectionObserver | null = null;
@@ -116,14 +123,12 @@ export class PdfViewer {
     if (options.toolbar === false) toolbar.hidden = true;
     this.mainGroup = element('div', 'pv-spacer');
     this.pluginGroup = element('div', 'pv-group');
-    this.pluginGroup.dataset.pdfOnly = '';
     this.pluginGroup.hidden = true;
     this.buildToolbar(toolbar);
 
     this.searchBar = this.buildSearchBar();
 
     const body = element('div', 'pv-body');
-    this.body = body;
     this.sidebar = element('aside', 'pv-sidebar');
     this.sidebar.setAttribute('aria-label', 'Side panel');
     this.tabs = element('div', 'pv-tabs');
@@ -144,7 +149,8 @@ export class PdfViewer {
     this.overlay = element('div', 'pv-overlay');
     this.overlay.hidden = true;
 
-    body.append(this.sidebar, this.scroller, this.emptyState, this.overlay);
+    this.imageHost = element('div', 'pv-image-host');
+    body.append(this.sidebar, this.scroller, this.imageHost, this.emptyState, this.overlay);
     this.root.append(toolbar, this.searchBar, body);
     this.shadow.append(this.root);
 
@@ -154,7 +160,7 @@ export class PdfViewer {
     this.root.addEventListener('keydown', (event) => this.handleKey(event));
     this.resizeObserver = new ResizeObserver(() => this.handleResize());
     this.resizeObserver.observe(this.scroller);
-    this.resizeObserver.observe(body);
+    this.resizeObserver.observe(this.imageHost);
 
     this.ready = this.installPlugins();
     if (options.source !== undefined) void this.load(options.source, options.fileName);
@@ -222,6 +228,7 @@ export class PdfViewer {
       this.engine = engine;
       this.documentName = loaded.name;
       this.root.dataset.kind = 'pdf';
+      this.applySidebarForKind('pdf');
       this.buildPages();
       this.emptyState.hidden = true;
       this.hideOverlay();
@@ -246,7 +253,7 @@ export class PdfViewer {
   setZoom(zoom: ZoomValue): void {
     if (this.imageView) {
       if (typeof zoom === 'number') this.imageView.zoomTo(zoom);
-      else this.imageView.fit();
+      else this.imageView.fit(zoom === 'fit-width' ? 'width' : 'page');
       return;
     }
     this.zoomSetting = zoom;
@@ -254,19 +261,11 @@ export class PdfViewer {
   }
 
   zoomIn(): void {
-    if (this.imageView) {
-      this.imageView.zoomBy(IMAGE_ZOOM_STEP);
-      return;
-    }
-    this.setZoom(ZOOM_STEPS.find((step) => step > this.scale + 0.001) ?? MAX_ZOOM);
+    this.setZoom(ZOOM_STEPS.find((step) => step > this.zoom + 0.001) ?? MAX_ZOOM);
   }
 
   zoomOut(): void {
-    if (this.imageView) {
-      this.imageView.zoomBy(-IMAGE_ZOOM_STEP);
-      return;
-    }
-    this.setZoom([...ZOOM_STEPS].reverse().find((step) => step < this.scale - 0.001) ?? MIN_ZOOM);
+    this.setZoom([...ZOOM_STEPS].reverse().find((step) => step < this.zoom - 0.001) ?? MIN_ZOOM);
   }
 
   /** Turns the view by 90 degrees. This doesn't change the file. */
@@ -282,11 +281,20 @@ export class PdfViewer {
 
   /** The current document as bytes, including any changes made by plugins. */
   async getBytes(): Promise<Uint8Array> {
-    if (this.imageBytes) return this.imageBytes;
+    if (this.imageBytes) return this.isImageEdited() ? this.renderImage() : this.imageBytes;
     if (!this.engine) throw new Error('No document is open.');
     let bytes = await this.engine.getBytes();
     for (const step of this.exportSteps) bytes = await step(bytes);
     return bytes;
+  }
+
+  /** The open image as a PNG or JPEG file, which is what the PDF API accepts. Includes any annotations. */
+  async getImageFile(): Promise<{ bytes: Uint8Array; name: string }> {
+    if (!this.imageBytes) throw new Error('No image is open.');
+    const canUseOriginal = !this.isImageEdited() && (this.imageMimeType === 'image/png' || this.imageMimeType === 'image/jpeg');
+    return canUseOriginal
+      ? { bytes: this.imageBytes, name: this.documentName }
+      : { bytes: await this.renderImage(), name: nameForType(this.documentName, 'image/png') };
   }
 
   /** The current document as base64, ready to send in a JSON request. */
@@ -301,7 +309,8 @@ export class PdfViewer {
       const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: isImage ? 'application/octet-stream' : 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
-      link.download = fileName ?? (isImage ? this.documentName : this.documentName.replace(/\.[^.]+$/, '') + '.pdf');
+      const imageName = this.isImageEdited() ? nameForType(this.documentName, 'image/png') : this.documentName;
+      link.download = fileName ?? (isImage ? imageName : this.documentName.replace(/\.[^.]+$/, '') + '.pdf');
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch (error) {
@@ -311,7 +320,7 @@ export class PdfViewer {
 
   async print(): Promise<void> {
     if (this.imageView && this.imageBytes) {
-      await this.printImage(this.imageBytes);
+      await this.printImage(await this.getBytes());
       return;
     }
     if (!this.engine) return;
@@ -332,7 +341,7 @@ export class PdfViewer {
         const context = canvas.getContext('2d')!;
         context.save();
         context.scale(PRINT_SCALE, PRINT_SCALE);
-        for (const painter of this.printPainters) await painter(context, number, this.engine.getPageSize(number));
+        for (const painter of this.printPainters) await painter(context, number, this.engine.getPageSize(number), 'print');
         context.restore();
         const image = printDocument.createElement('img');
         image.src = canvas.toDataURL('image/jpeg', 0.92);
@@ -350,10 +359,38 @@ export class PdfViewer {
     }
   }
 
+  private isImageEdited(): boolean {
+    return this.imageChangeChecks.some((check) => check());
+  }
+
+  // Draws the image at its full size, with plugins' content on top, so an edited image loses no resolution.
+  private async renderImage(): Promise<Uint8Array> {
+    const url = URL.createObjectURL(new Blob([this.imageBytes as BlobPart], { type: this.imageMimeType }));
+    try {
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(Math.max(image.naturalWidth, this.imageSize.width));
+      canvas.height = Math.round(Math.max(image.naturalHeight, this.imageSize.height));
+      const context = canvas.getContext('2d')!;
+      // Keeps a tiny image's pixels crisp when it's saved larger.
+      context.imageSmoothingEnabled = canvas.width <= image.naturalWidth;
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      context.scale(canvas.width / this.imageSize.width, canvas.height / this.imageSize.height);
+      for (const painter of this.printPainters) await painter(context, 1, this.imageSize, 'image');
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('The image could not be saved.');
+      return new Uint8Array(await blob.arrayBuffer());
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
   private async printImage(bytes: Uint8Array): Promise<void> {
     const frame = document.createElement('iframe');
     frame.style.cssText = 'position:fixed;width:0;height:0;border:0;right:0;bottom:0';
-    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: this.imageMimeType }));
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: this.isImageEdited() ? 'image/png' : this.imageMimeType }));
     try {
       document.body.append(frame);
       const printDocument = frame.contentDocument!;
@@ -440,6 +477,7 @@ export class PdfViewer {
       addSidebarPanel: (panel) => this.addPanel(panel),
       addExportStep: (step) => this.exportSteps.push(step),
       addPrintPainter: (painter) => this.printPainters.push(painter),
+      addImageChangeCheck: (check) => this.imageChangeChecks.push(check),
       getPdfJsDocument: () => (this.engine && 'document' in this.engine ? (this.engine as { document: unknown }).document : null),
       hasService: this.service.isConfigured,
       callService: (path, body) => this.service.callJson(path, body),
@@ -463,7 +501,6 @@ export class PdfViewer {
     if (!group) {
       group = element('div', 'pv-group');
       group.dataset.group = name;
-      group.dataset.pdfOnly = '';
       this.pluginGroup.parentElement!.insertBefore(group, this.pluginGroup);
     }
     return group;
@@ -476,6 +513,7 @@ export class PdfViewer {
       panel.onShow?.();
     });
     tab.dataset.panel = panel.id;
+    if (panel.forImages) tab.dataset.forImages = 'true';
     this.tabs.append(tab);
 
     const wrapper = element('div', 'pv-tab-panel');
@@ -485,7 +523,18 @@ export class PdfViewer {
     this.tabPanels.append(wrapper);
   }
 
+  // Images only get the panels that apply to them. With none, the side panel isn't offered at all.
+  private applySidebarForKind(kind: DocumentKind): void {
+    const tabs = Array.from(this.tabs.children) as HTMLElement[];
+    const usable = tabs.filter((tab) => kind === 'pdf' || tab.dataset.forImages === 'true');
+    for (const tab of tabs) tab.hidden = !usable.includes(tab);
+    this.controls.sidebar.hidden = usable.length === 0;
+    if (usable.length === 0) this.toggleSidebar(false);
+    else if (!usable.some((tab) => tab.dataset.panel === this.currentPanel)) this.showPanel(usable[0].dataset.panel!);
+  }
+
   private showPanel(id: string): void {
+    this.currentPanel = id;
     for (const panel of this.tabPanels.children) (panel as HTMLElement).hidden = (panel as HTMLElement).dataset.panel !== id;
     for (const tab of this.tabs.children) tab.setAttribute('aria-pressed', String((tab as HTMLElement).dataset.panel === id));
   }
@@ -494,7 +543,6 @@ export class PdfViewer {
 
   private buildToolbar(toolbar: HTMLElement): void {
     const navigation = element('div', 'pv-group');
-    navigation.dataset.pdfOnly = '';
     const sidebarButton = iconButton('Toggle side panel', ICONS.sidebar, () => this.toggleSidebar());
     sidebarButton.setAttribute('aria-pressed', 'false');
     this.controls.sidebar = sidebarButton;
@@ -512,10 +560,10 @@ export class PdfViewer {
     });
     const total = element('span', 'pv-page-total');
     Object.assign(this.controls, { previous, next, pageInput, total });
+    for (const control of [previous, next, pageInput, total]) control.dataset.pdfOnly = '';
     navigation.append(sidebarButton, previous, next, pageInput, total);
 
     const zoom = element('div', 'pv-group');
-    zoom.dataset.pdfOnly = '';
     const zoomSelect = element('select', 'pv-select') as HTMLSelectElement;
     zoomSelect.setAttribute('aria-label', 'Zoom level');
     const zoomOptions: Array<[string, string]> = [['fit-width', 'Fit width'], ['fit-page', 'Whole page'], ...ZOOM_STEPS.map((step): [string, string] => [String(step), `${Math.round(step * 100)}%`])];
@@ -537,9 +585,21 @@ export class PdfViewer {
     this.controls.zoomCustom = customOption;
     zoom.append(iconButton('Zoom out', ICONS.zoomOut, () => this.zoomOut()), zoomSelect, iconButton('Zoom in', ICONS.zoomIn, () => this.zoomIn()));
 
-    const view = element('div', 'pv-group pv-hide-small');
-    view.dataset.pdfOnly = '';
-    view.append(iconButton('Rotate view', ICONS.rotate, () => this.rotateView()));
+    const view = element('div', 'pv-group');
+    const imageButton = (label: string, icon: string, action: (image: ImageView) => void) => {
+      const button = iconButton(label, icon, () => {
+        if (this.imageView) action(this.imageView);
+      });
+      button.dataset.imageOnly = '';
+      return button;
+    };
+    view.append(
+      iconButton('Rotate view', ICONS.rotate, () => this.rotateView()),
+      imageButton('Rotate left', ICONS.rotateLeft, (image) => image.rotate(-90)),
+      imageButton('Flip horizontally', ICONS.flipHorizontal, (image) => image.flip('horizontal')),
+      imageButton('Flip vertically', ICONS.flipVertical, (image) => image.flip('vertical')),
+      imageButton('Actual size', ICONS.actualSize, (image) => image.zoomTo(1)),
+    );
 
     const actions = element('div', 'pv-group');
     if (this.options.allowOpen !== false) {
@@ -675,7 +735,7 @@ export class PdfViewer {
   private async openImage(loaded: LoadedSource, mimeType: string, token: number): Promise<void> {
     const { ImageView, IMAGE_VIEW_CSS } = await import('./image-view');
     // Checked first, so a damaged image leaves whatever is already open in place.
-    const url = await ImageView.validate(loaded.bytes, mimeType);
+    const { url, width, height } = await ImageView.validate(loaded.bytes, mimeType);
     if (token !== this.loadToken) {
       URL.revokeObjectURL(url);
       return;
@@ -691,11 +751,19 @@ export class PdfViewer {
     this.documentName = nameForType(loaded.name, mimeType);
     this.imageBytes = loaded.bytes;
     this.imageMimeType = mimeType;
+    const longestSide = Math.max(width, height, 1);
+    const scale = longestSide < IMAGE_MIN_LOGICAL_SIZE ? IMAGE_MIN_LOGICAL_SIZE / longestSide : Math.min(1, IMAGE_MAX_LOGICAL_SIZE / longestSide);
+    this.imageSize = { width: (width || IMAGE_MAX_LOGICAL_SIZE) * scale, height: (height || IMAGE_MAX_LOGICAL_SIZE) * scale };
+    this.applySidebarForKind('image');
     this.emptyState.hidden = true;
     this.hideOverlay();
     (this.controls.searchInput as HTMLInputElement).value = '';
     this.searchBar.dataset.open = 'false';
-    this.imageView = await ImageView.open(this.body, url, this.documentName, (ratio) => this.emit('zoomChanged', { scale: ratio }));
+    this.imageView = await ImageView.open(this.imageHost, url, this.documentName, this.imageSize, (ratio) => {
+      this.syncImageZoom(ratio);
+      this.emit('zoomChanged', { scale: ratio });
+    });
+    this.emit('pageLayersReady', { pageNumber: 1, layer: this.imageView.layer, size: this.imageSize });
     this.emit('documentLoaded', { pageCount: 1, fileName: this.documentName, kind: 'image' });
   }
 
@@ -814,6 +882,17 @@ export class PdfViewer {
       270: 'rotate(270deg) translateX(-100%)',
     };
     view.layers.style.transform = `scale(${this.scale}) ${rotate[this.rotation]}`;
+  }
+
+  private syncImageZoom(ratio: number): void {
+    const select = this.controls.zoomSelect as HTMLSelectElement;
+    const step = ZOOM_STEPS.find((value) => Math.abs(value - ratio) < 0.001);
+    if (step !== undefined) {
+      select.value = String(step);
+    } else {
+      this.controls.zoomCustom.textContent = `${Math.round(ratio * 100)}%`;
+      select.value = 'custom';
+    }
   }
 
   private syncZoomControl(): void {

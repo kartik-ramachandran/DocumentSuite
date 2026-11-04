@@ -96,12 +96,14 @@ export interface SidebarPanel {
   icon: string;
   element: HTMLElement;
   onShow?: () => void;
+  /** Also show this panel while an image is open. */
+  forImages?: boolean;
 }
 
 /** Changes the document on its way out, such as adding annotations to a download. */
 export type ExportStep = (bytes: Uint8Array) => Promise<Uint8Array>;
 /** Draws a plugin's content onto a printed page. Drawing units are points. */
-export type PrintPainter = (context: CanvasRenderingContext2D, pageNumber: number, size: PageSize) => void | Promise<void>;
+export type PrintPainter = (context: CanvasRenderingContext2D, pageNumber: number, size: PageSize, target: 'print' | 'image') => void | Promise<void>;
 
 export interface ViewerContext {
   readonly viewer: PdfViewer;
@@ -112,6 +114,8 @@ export interface ViewerContext {
   addSidebarPanel(panel: SidebarPanel): void;
   addExportStep(step: ExportStep): void;
   addPrintPainter(painter: PrintPainter): void;
+  /** Reports whether a plugin has changed the open image, so that exports need its drawing added. */
+  addImageChangeCheck(check: () => boolean): void;
   /** The raw PDF.js document in client mode, otherwise null. */
   getPdfJsDocument(): unknown;
   /** True when the serviceUrl option is set. */

@@ -3,7 +3,7 @@
 An open-source PDF and image viewer and editor for React, Vue, Angular and plain JavaScript.
 
 - **Viewing:** zoom, thumbnails, search, selectable text, rotation, printing and download
-- **Images:** PNG, JPEG, GIF, WebP, BMP, SVG, AVIF and ICO files open automatically in an image viewer, with zoom, pan, rotate and flip
+- **Images:** PNG, JPEG, GIF, WebP, BMP, SVG, AVIF and ICO files open automatically, with the same toolbar, annotations and document tools as PDFs, plus pan and flip
 - **Editing (optional):** highlights, drawing, text, comments, pictures and form filling, all saved into the PDF
 - **Document tools (with the API):** organize pages, redact, compress, OCR, watermark, convert and more
 - **Two rendering modes:** in the browser, so documents stay on the device, or on your server
@@ -113,7 +113,7 @@ const saved = editor.annotations.getAnnotations();
 editor.annotations.setAnnotations(saved);
 ```
 
-In exported PDFs, drawings, highlights, text and pictures become page content, comments become real PDF comments, and form values stay in their fields.
+In exported PDFs, drawings, highlights, text and pictures become page content, comments become real PDF comments, and form values stay in their fields. The same tools work on images, which export as a PNG at full resolution.
 
 ## Options
 
@@ -181,7 +181,8 @@ The viewer needs `worker-src blob:` because it starts the PDF.js worker from a b
 
 ## Known limits
 
-- Annotations, forms and document tools apply to PDFs, so they're hidden while an image is open.
+- Document tools convert an image to a PDF first and open the result in the PDF viewer. **Undo last tool** brings the image back.
+- An annotated image downloads as a new PNG, with comments drawn beside their icons, because images can't hold real comments. Rotating and flipping only change the view, as they do for PDFs.
 - Rotated pages have no selectable text in server mode.
 - Text that isn't in Western scripts is saved as a picture when exported.
 - Fonts missing from a PDF fall back to system fonts, so those pages may look slightly different.
