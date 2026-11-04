@@ -1,19 +1,52 @@
 # PDF Suite
 
-An open-source toolkit for working with PDFs and office documents: a REST API, an MCP server for AI clients, and an embeddable viewer and editor for React, Vue and Angular.
+Open-source PDF tools you run yourself: a REST API, an MCP server for AI clients, and a viewer and editor you can embed in React, Vue, Angular or plain JavaScript apps.
 
-- **Convert** between PDF and Word, Excel, PowerPoint, HTML, Markdown, text and images. PDF to Office produces editable documents, not pictures of pages
+Everything runs on your own infrastructure, so documents stay with you. The one exception is the optional AI review, which is off by default and sends documents to the Azure OpenAI service you configure.
+
+![The viewer open in a window, with a highlight, a rectangle, a text note and a comment on a sample report](docs/screenshots/viewer-modal.png)
+
+## What it does
+
+### Work with documents through an API
+
+More than 40 routes, which you can call with file uploads or with base64 inside JSON.
+
+- **Convert** between PDF and Word, Excel, PowerPoint, HTML, Markdown, text and images. PDF to Office produces editable documents with real paragraphs and tables, not pictures of pages
 - **Edit** by merging, splitting, organizing, rotating, cropping, compressing, watermarking, and adding page numbers or image stamps
 - **Read** with OCR for scanned pages, searchable PDFs, and document structure as JSON
 - **Protect** with permanent redaction, passwords and metadata removal
 - **Fill** PDF forms, and optionally flatten them
-- **Send documents as files or as base64 in JSON**, on every route
-- **Use it from AI clients** over MCP, without passing documents through the model
-- **Embed it in your app** with the [viewer](viewer/README.md)
 
-Everything runs on your own infrastructure, so documents stay with you.
+### Show and edit documents inside your app
 
-![The viewer open in a window, with a highlight, a rectangle, a text note and a comment on a sample report](docs/screenshots/viewer-modal.png)
+The [viewer](viewer/README.md) gives your users a list of files that open in a window they can move and resize, without leaving your app. A click or right-click on a file opens it or shows its menu.
+
+| | |
+|---|---|
+| ![A list of files with the right-click menu open on one of them](docs/screenshots/file-list.png) | ![The side panel showing the document tools, with the Watermark tool open](docs/screenshots/document-tools.png) |
+| **A file list** with a right-click menu | **Document tools** that call the API |
+| ![A photo in the viewer, with image rotate and flip buttons in the toolbar](docs/screenshots/image-viewer.png) | ![A Word document open in the viewer](docs/screenshots/word-document.png) |
+| **Images** open automatically, with the same annotation tools | **Word, Excel and PowerPoint files** open through the API |
+
+- **Annotate** with highlights, drawing, text, comments, pictures and signatures, all saved into the PDF
+- **Fill in forms** right on the page
+- **Keep documents on the device** by rendering in the browser, or render on your server instead
+- **Download** with the name the file was uploaded with, and optionally ask for a new one first
+
+### Control it all from one set of settings
+
+What a click does, where the toolbar sits, whether a watermark appears, which features are on: all of it is a setting. Set them in code, or give people the ready-made settings screen. Choices can be remembered in the browser or [saved on your server](viewer/README.md#saving-settings-on-the-server), for each app, team or user.
+
+| | |
+|---|---|
+| ![The settings screen, with groups for the file list, viewer window, downloads, viewer, editing and watermark](docs/screenshots/settings-panel.png) | ![The settings screen in dark mode](docs/screenshots/settings-panel-dark.png) |
+| ![A report with CONFIDENTIAL written diagonally across the page](docs/screenshots/watermark.png) | ![The viewer with its toolbar down the left side](docs/screenshots/toolbar-left.png) |
+| **A watermark**, on screen and in prints and downloads | **The toolbar** on any side of the viewer |
+
+### Use it from AI clients
+
+The [MCP server](#mcp-server) gives AI clients six tools for working with documents. Files stay in a workspace folder and are referred to by name, so documents don't pass through the model or use up its tokens.
 
 ## Quick start
 
@@ -31,7 +64,27 @@ Open http://localhost:8080/swagger to try the API, or convert a file straight aw
 curl -o report.pdf -F "files=@report.docx" http://localhost:8080/api/pdf/word-to-pdf
 ```
 
+To try the viewer, keep that running and start a demo. You'll need Node.js too.
+
+```bash
+cd viewer
+npm install
+npm run build
+npm run build:examples
+npm run preview -w example-react
+```
+
+Then open http://localhost:5173. The list has sample files to click on, and **Settings** above it lets you try every option. There are also `example-vue` and `example-angular` demos.
+
 > **Don't expose this to the internet as it stands.** The REST API has no login or rate limits. Read [SECURITY.md](SECURITY.md) before deploying it.
+
+## Project status
+
+This is an early release, at version 0.1.0.
+
+- **The viewer packages aren't on npm yet.** To use them now, build them from this repository, as [CONTRIBUTING.md](CONTRIBUTING.md) describes
+- **The API needs protecting.** Put it behind your own gateway for login and rate limits
+- **Viewer settings shape the interface, and aren't security controls.** Turning off downloads or adding a watermark happens in the browser, so protect sensitive documents on your server
 
 ## What's here
 
@@ -39,6 +92,8 @@ curl -o report.pdf -F "files=@report.docx" http://localhost:8080/api/pdf/word-to
 |---|---|
 | [`backend`](backend) | The REST API and MCP server (ASP.NET Core, .NET 10) |
 | [`viewer`](viewer/README.md) | The viewer and editor for React, Vue, Angular and plain JavaScript |
+| [`viewer/examples`](viewer/examples) | Demos for React, Vue and Angular |
+| [`docs/screenshots`](docs/screenshots) | The screenshots above, which only show generated sample files |
 
 Contributions are welcome, so please see [CONTRIBUTING.md](CONTRIBUTING.md). This project is under the [MIT License](LICENSE), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists what it relies on.
 
