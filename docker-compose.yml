@@ -7,6 +7,7 @@ services:
       - "8080:8080"
     volumes:
       - ./workspace:/workspace
+      - viewer-settings:/data/settings
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
@@ -17,3 +18,8 @@ services:
       - SAL_USE_VCLPLUGIN=gen
       - Mcp__ApiKey=${MCP_API_KEY:-}
       - Mcp__WorkspaceRoot=/workspace
+      - Settings__Path=/data/settings
+      - Settings__WriteKey=${SETTINGS_WRITE_KEY:-}
+
+volumes:
+  viewer-settings:

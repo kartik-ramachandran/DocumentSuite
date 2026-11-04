@@ -179,6 +179,13 @@ test('without a service, non-PDF files explain what is needed', async ({ page })
   await expect(page.getByRole('alert')).toContainText('serviceUrl');
 });
 
+test('when the service can\'t be reached, non-PDF files say so', async ({ page }) => {
+  await page.goto(demoUrl({ editor: '0', service: 'http://localhost:9' }));
+  await page.waitForFunction(() => Boolean((window as never as { pdfViewer?: unknown }).pdfViewer));
+  await page.getByLabel('Choose a file to open').setInputFiles(fixture('note.docx'));
+  await expect(page.getByRole('alert')).toContainText("Couldn't reach the PDF service");
+});
+
 test('throws no uncaught errors during normal use', async ({ page }) => {
   await openFile(page, 'report.pdf', 5);
   await page.getByRole('button', { name: 'Zoom in' }).click();

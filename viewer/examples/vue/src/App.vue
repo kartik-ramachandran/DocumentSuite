@@ -2,11 +2,12 @@
 import { FileList, PdfViewer, SettingsPanel } from '@pdf-suite/vue';
 import { createEditorPlugin } from '@pdf-suite/editor';
 import { markRaw, onMounted, ref, shallowRef, watchEffect } from 'vue';
-import { applyDemoSettings } from '../../shared/demo-settings';
+import { applyDemoSettings, demoPanelOptions } from '../../shared/demo-settings';
 import { createSampleFiles, filesFromInput } from '../../shared/sample-files';
 
 // Query parameters let the same demo run every mode: ?view=viewer&mode=server&transport=json&editor=0&rename=1
 const params = new URLSearchParams(location.search);
+const panelOptions = demoPanelOptions(params.get('service') ?? 'http://localhost:8080');
 applyDemoSettings();
 const isViewerDemo = params.get('view') === 'viewer';
 
@@ -61,7 +62,7 @@ onMounted(() => {
     <p><label>Add files <input type="file" multiple aria-label="Add files" @change="addFiles" /></label></p>
     <details style="margin-bottom: 16px">
       <summary style="cursor: pointer; font-weight: 600">Settings</summary>
-      <div style="margin-top: 12px"><SettingsPanel :options="{ storageKey: 'pdf-suite-demo-settings' }" /></div>
+      <div style="margin-top: 12px"><SettingsPanel :options="panelOptions" /></div>
     </details>
     <FileList :files="files" :options="listOptions" />
   </main>

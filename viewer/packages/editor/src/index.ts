@@ -2,6 +2,7 @@ import type { ViewerContext, ViewerPlugin } from '@pdf-suite/viewer';
 import { AnnotationController } from './annotations';
 import { FormController } from './forms';
 import { ToolsController } from './tools';
+import { WatermarkController } from './watermark';
 
 export type { Annotation, AnnotationTool, Point, Rect } from './annotation-types';
 
@@ -28,6 +29,11 @@ export function createEditorPlugin(options: EditorPluginOptions = {}): EditorPlu
 
     install(context: ViewerContext) {
       const { settings } = context;
+
+      // Installed first, so that annotations and form fields sit above it.
+      const watermark = new WatermarkController(context);
+      watermark.install();
+
       if (settings.formFilling) {
         forms = new FormController(context);
         forms.install();
@@ -48,7 +54,7 @@ export function createEditorPlugin(options: EditorPluginOptions = {}): EditorPlu
         annotations = null;
       }
 
-      if (options.tools !== false && settings.documentTools) new ToolsController(context, context.hasService).install();
+      if (options.tools !== false && settings.documentTools) new ToolsController(context, context.hasService, watermark).install();
     },
 
     destroy() {

@@ -224,3 +224,185 @@ test('a downloaded annotated file opens as a normal PDF', async ({ page }) => {
   const saved = await readPdf(readFileSync(await download.path()));
   expect(saved.pageCount).toBe(5);
 });
+
+test.describe('comments and text after they are added', () => {
+  const page1 = (page: Page) => page.locator('.pv-page[data-page="1"]');
+  const notes = (page: Page) => page1(page).locator('[data-kind="note"]');
+  const texts = (page: Page) => page1(page).locator('[data-kind="text"]');
+  const commentTool = (page: Page) => page.getByRole('button', { name: 'Add a comment' });
+  const textTool = (page: Page) => page.getByRole('button', { name: 'Add text' });
+  const addDialog = (page: Page) => page.getByRole('dialog', { name: 'Add a comment' });
+  const editDialog = (page: Page) => page.getByRole('dialog', { name: 'Edit comment' });
+
+  async function addComment(page: Page, text: string, at: [number, number] = [300, 300]): Promise<void> {
+    await commentTool(page).click();
+    await clickOnPage(page, 1, at);
+    await addDialog(page).getByRole('textbox').fill(text);
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(addDialog(page)).toHaveCount(0);
+  }
+
+  async function addText(page: Page, text: string): Promise<void> {
+    await textTool(page).click();
+    await clickOnPage(page, 1, [100, 500]);
+    await page.getByLabel('Annotation text').fill(text);
+    await page.getByLabel('Annotation text').press('Control+Enter');
+    await expect(texts(page)).toHaveCount(1);
+  }
+
+  test.beforeEach(async ({ page }) => {
+    await openDemo(page, demoUrl());
+    await openFile(page, 'report.pdf', 5);
+    await page.getByLabel('Zoom level').selectOption('1');
+    await expect.poll(async () => Math.round((await page1(page).boundingBox())!.width)).toBe(612);
+  });
+
+  test('the comment tool turns off once a comment is saved', async ({ page }) => {
+    await addComment(page, 'First');
+    await expect(commentTool(page)).toHaveAttribute('aria-pressed', 'false');
+    await clickOnPage(page, 1, [100, 100]);
+    await page.waitForTimeout(150);
+    await expect(addDialog(page)).toHaveCount(0);
+    await expect(notes(page)).toHaveCount(1);
+  });
+
+  test('cancelling a new comment keeps the tool on, and adds nothing', async ({ page }) => {
+    await commentTool(page).click();
+    await clickOnPage(page, 1, [300, 300]);
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(notes(page)).toHaveCount(0);
+    await expect(commentTool(page)).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('clicking a comment opens it, and saving changes it rather than adding another', async ({ page }) => {
+    await addComment(page, 'First');
+    await notes(page).click();
+    await expect(editDialog(page).getByRole('textbox')).toHaveValue('First');
+    await editDialog(page).getByRole('textbox').fill('Changed');
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(notes(page)).toHaveCount(1);
+    await expect(notes(page).locator('title')).toHaveText('Changed');
+    const exported = (await (await exportedPdf(page)).annotations(1)).find((annotation) => annotation.subtype === 'Text');
+    expect(exported?.contentsObj?.str ?? exported?.contents).toContain('Changed');
+  });
+
+  test('with the comment tool on, an existing comment opens and empty space starts a new one', async ({ page }) => {
+    await addComment(page, 'First');
+    await commentTool(page).click();
+    await notes(page).click();
+    await expect(editDialog(page)).toBeVisible();
+    await expect(addDialog(page)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(notes(page)).toHaveCount(1);
+
+    await clickOnPage(page, 1, [100, 100]);
+    await expect(addDialog(page)).toBeVisible();
+  });
+
+  test('a comment stays readable by hover when no tool is on', async ({ page }) => {
+    await addComment(page, 'Read me');
+    await expect(notes(page).locator('title')).toHaveText('Read me');
+    await expect(notes(page)).toHaveCSS('pointer-events', 'auto');
+    await expect(notes(page)).toHaveCSS('cursor', 'pointer');
+  });
+
+  test('other tools draw straight over a comment', async ({ page }) => {
+    await addComment(page, 'First', [300, 300]);
+    await page.getByRole('button', { name: 'Draw a rectangle' }).click();
+    await dragOnPage(page, 1, [280, 280], [340, 340]);
+    await expect(page1(page).locator('[data-kind="rect"]')).toHaveCount(1);
+    await expect(editDialog(page)).toHaveCount(0);
+  });
+
+  test('with the select tool, a click selects a comment and a double click opens it', async ({ page }) => {
+    await addComment(page, 'First');
+    await page.getByRole('button', { name: 'Select annotations' }).click();
+    await notes(page).click();
+    await expect(page.locator('[data-selected="true"]')).toHaveCount(1);
+    await expect(editDialog(page)).toHaveCount(0);
+
+    await notes(page).dblclick();
+    await expect(editDialog(page).getByRole('textbox')).toHaveValue('First');
+  });
+
+  test('a comment can still be moved and deleted with the select tool', async ({ page }) => {
+    await addComment(page, 'First', [300, 300]);
+    await page.getByRole('button', { name: 'Select annotations' }).click();
+    const before = (await notes(page).boundingBox())!;
+    await page.mouse.move(before.x + 5, before.y + 5);
+    await page.mouse.down();
+    await page.mouse.move(before.x + 85, before.y + 65, { steps: 4 });
+    await page.mouse.up();
+    const after = (await notes(page).boundingBox())!;
+    expect(Math.round(after.x - before.x)).toBe(80);
+    await page.keyboard.press('Delete');
+    await expect(notes(page)).toHaveCount(0);
+  });
+
+  test('clearing a comment deletes it, and undo brings it back', async ({ page }) => {
+    await addComment(page, 'First');
+    await notes(page).click();
+    await editDialog(page).getByRole('textbox').fill('');
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(notes(page)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(notes(page)).toHaveCount(1);
+  });
+
+  test('keyboard shortcuts keep working after saving a comment', async ({ page }) => {
+    await addComment(page, 'First');
+    await page.keyboard.press('Control+z');
+    await expect(notes(page)).toHaveCount(0);
+  });
+
+  test('clicking away saves text, without opening another box', async ({ page }) => {
+    await textTool(page).click();
+    await clickOnPage(page, 1, [100, 500]);
+    await page.getByLabel('Annotation text').fill('Typed');
+    await clickOnPage(page, 1, [300, 200]);
+    await expect(texts(page)).toHaveCount(1);
+    await expect(page.getByLabel('Annotation text')).toHaveCount(0);
+    await expect(textTool(page)).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('clicking away from an empty text box closes it and keeps the tool on', async ({ page }) => {
+    await textTool(page).click();
+    await clickOnPage(page, 1, [100, 500]);
+    await expect(page.getByLabel('Annotation text')).toBeFocused();
+    await clickOnPage(page, 1, [300, 200]);
+    await expect(page.getByLabel('Annotation text')).toHaveCount(0);
+    await expect(texts(page)).toHaveCount(0);
+    await expect(textTool(page)).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('switching tools saves text that is still being typed', async ({ page }) => {
+    await textTool(page).click();
+    await clickOnPage(page, 1, [100, 500]);
+    await page.getByLabel('Annotation text').fill('Typed');
+    await page.getByRole('button', { name: 'Draw a rectangle' }).click();
+    await expect(texts(page)).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Draw a rectangle' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('with the select tool, a double click edits text in place', async ({ page }) => {
+    await addText(page, 'Typed');
+    await page.getByRole('button', { name: 'Select annotations' }).click();
+    await texts(page).dblclick();
+    const editor = page.getByLabel('Annotation text');
+    await expect(editor).toHaveValue('Typed');
+    await expect(texts(page)).toHaveCount(0);
+    await editor.fill('Changed');
+    await editor.press('Control+Enter');
+    await expect(texts(page)).toHaveText('Changed');
+    expect(await (await exportedPdf(page)).text(1)).toContain('Changed');
+  });
+
+  test('Esc while editing text keeps what was there', async ({ page }) => {
+    await addText(page, 'Typed');
+    await page.getByRole('button', { name: 'Select annotations' }).click();
+    await texts(page).dblclick();
+    await page.getByLabel('Annotation text').fill('Changed');
+    await page.getByLabel('Annotation text').press('Escape');
+    await expect(texts(page)).toHaveText('Typed');
+  });
+});

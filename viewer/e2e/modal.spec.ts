@@ -43,7 +43,7 @@ test.describe('file list', () => {
   test.beforeEach(async ({ page }) => openList(page));
 
   test('shows each file with its type and size', async ({ page }) => {
-    await expect(page.locator('li[data-file]')).toHaveCount(4);
+    await expect(page.locator('li[data-file]')).toHaveCount(5);
     await expect(row(page, 'report')).toContainText('Annual report.pdf');
     await expect(row(page, 'report').locator('.pl-badge')).toHaveText('pdf');
     await expect(row(page, 'report').locator('.pl-meta')).toContainText('KB');
@@ -70,7 +70,7 @@ test.describe('file list', () => {
 
   test('files can be added and opened', async ({ page }) => {
     await page.getByLabel('Add files').setInputFiles(fixture('rotated.pdf'));
-    await expect(page.locator('li[data-file]')).toHaveCount(5);
+    await expect(page.locator('li[data-file]')).toHaveCount(6);
     await page.locator('li[data-file^="rotated.pdf"]').click();
     await expect(page.locator('.pm-title')).toHaveText('rotated.pdf');
     await expect(page.locator('.pv-page')).toHaveCount(1);
@@ -132,7 +132,7 @@ test.describe('context menu', () => {
     await row(page, 'form').click({ button: 'right' });
     await menu(page).getByRole('menuitem', { name: 'Remove from list' }).click();
     await expect(row(page, 'form')).toHaveCount(0);
-    await expect(page.locator('li[data-file]')).toHaveCount(3);
+    await expect(page.locator('li[data-file]')).toHaveCount(4);
   });
 
   test('closes with Esc, or a click elsewhere, and only one is open at a time', async ({ page }) => {
@@ -456,4 +456,62 @@ test('an image refits as the modal is resized', async ({ page }) => {
   await expect.poll(width).toBeLessThan(before);
   const host = (await page.locator('.pv-image').boundingBox())!;
   expect(await width()).toBeLessThanOrEqual(host.width);
+});
+
+test('a scroll just before opening the menu does not close it, but a later one does', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 260 });
+  await page.goto('/?click=menu');
+  const lastRow = page.locator('li[data-file="notes"]');
+  await expect(lastRow).toBeAttached();
+  await lastRow.evaluate((element) => {
+    window.scrollBy(0, 40);
+    (element as HTMLElement).click();
+  });
+  await page.waitForTimeout(200);
+  await expect(page.getByRole('menu')).toBeVisible();
+
+  await page.evaluate(() => window.scrollBy(0, -20));
+  await expect(page.getByRole('menu')).toHaveCount(0);
+});
+
+test('a Word file opens in the modal and downloads as Word', async ({ page }) => {
+  const up = await fetch('http://localhost:8080/swagger/index.html').then((response) => response.ok).catch(() => false);
+  test.skip(!up, 'needs the PDF service at localhost:8080');
+  await page.goto('/');
+  await page.locator('li[data-file="word"]').click();
+  await expect(page.locator('.pv-page[data-page="1"] canvas.pv-canvas')).toBeVisible({ timeout: 30_000 });
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download', exact: true }).click()]);
+  expect(download.suggestedFilename()).toBe('Meeting notes.docx');
+});
+
+test('a Word file shows the same opening message as a PDF while it converts', async ({ page }) => {
+  await page.route('**/api/pdf/any-to-pdf', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"stopped by the test"}' });
+  });
+  await page.goto('/');
+  await page.locator('li[data-file="word"]').click();
+  await expect(page.locator('[data-pdf-modal] [role="status"]')).toHaveText('Opening document…');
+  await page.waitForTimeout(400);
+  await expect(page.locator('[data-pdf-modal] [role="status"]')).toHaveText('Opening document…');
+  await expect(page.getByText('Converting')).toHaveCount(0);
+});
+
+test('comments work the same inside the modal', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('li[data-file="report"]').click();
+  const area = page.locator('.pv-page[data-page="1"]');
+  await expect(area.locator('canvas.pv-canvas')).toBeVisible();
+  const box = (await area.boundingBox())!;
+
+  await page.getByRole('button', { name: 'Add a comment' }).click();
+  await page.mouse.click(box.x + 150, box.y + 150);
+  await page.getByRole('dialog', { name: 'Add a comment' }).getByRole('textbox').fill('In the modal');
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  await area.locator('[data-kind="note"]').click();
+  await expect(page.getByRole('dialog', { name: 'Edit comment' }).getByRole('textbox')).toHaveValue('In the modal');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(area.locator('[data-kind="note"]')).toHaveCount(1);
+  await expect(page.locator('[data-pdf-modal] dialog')).toBeVisible();
 });

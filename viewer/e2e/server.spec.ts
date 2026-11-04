@@ -121,7 +121,6 @@ test.describe('document tools', () => {
     const editor = page.getByLabel('Annotation text');
     await editor.fill('KeepMe');
     await editor.press('Control+Enter');
-    await page.getByRole('button', { name: 'Add text' }).click();
 
     const tool = await openTool(page, 'Watermark');
     await tool.getByRole('button', { name: 'Add watermark' }).click();

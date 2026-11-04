@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
-import { demoUrl, fixture } from './helpers';
+import { randomUUID } from 'node:crypto';
+import { demoUrl, exportedPdf, fixture, isServiceUp } from './helpers';
 
 const row = (page: Page, id: string) => page.locator(`li[data-file="${id}"]`);
 const menu = (page: Page) => page.getByRole('menu');
@@ -305,7 +306,7 @@ test.describe('settings screen', () => {
     await expect(setting(page, 'clickAction')).toHaveValue('open');
     await expect(setting(page, 'allowRename')).not.toBeChecked();
     await expect(setting(page, 'modalResizable')).toBeChecked();
-    expect(await page.locator('[data-setting]').count()).toBe(25);
+    expect(await page.locator('[data-setting]').count()).toBe(29);
   });
 
   test('choosing the single click action takes effect immediately', async ({ page }) => {
@@ -354,9 +355,447 @@ test.describe('settings screen', () => {
     await expect(dialog(page)).toBeVisible();
   });
 
+  test('stays readable on a dark system, with on/off settings shown as switches', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await openPanel(page);
+    await expect(page.locator('.ps-panel')).toHaveCSS('background-color', 'rgb(38, 43, 53)');
+    await expect(page.getByRole('button', { name: 'Reset to defaults' })).toHaveCSS('color', 'rgb(231, 234, 240)');
+    await expect(page.locator('legend', { hasText: 'File list' })).toHaveCSS('color', 'rgb(231, 234, 240)');
+    await expect(page.getByRole('switch', { name: 'Can be resized' })).toBeChecked();
+    const pageBackground = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(pageBackground).not.toBe('rgb(255, 255, 255)');
+  });
+
+  test('asking for a file name is turned off while downloads are off', async ({ page }) => {
+    await openPanel(page);
+    await setting(page, 'allowRename').check();
+    await setting(page, 'allowDownload').uncheck();
+    await expect(setting(page, 'allowRename')).toBeDisabled();
+
+    await setting(page, 'allowDownload').check();
+    await expect(setting(page, 'allowRename')).toBeEnabled();
+    await expect(setting(page, 'allowRename')).toBeChecked();
+  });
+
   test('settings changed in code show on the screen', async ({ page }) => {
     await openPanel(page);
     await page.evaluate(() => (window as never as { configureViewer(value: object): void }).configureViewer({ clickAction: 'none' }));
     await expect(setting(page, 'clickAction')).toHaveValue('none');
+  });
+});
+
+test.describe('watermark', () => {
+  const ON = { watermark: true, watermarkText: 'CONFIDENTIAL' };
+  const marks = (page: Page) => page.locator('.pv-watermark text');
+  const countOf = (text: string, word: string) => text.split(word).length - 1;
+
+  test('is off by default, on screen and in the file', async ({ page }) => {
+    await openViewer(page, {});
+    await expect(marks(page)).toHaveCount(0);
+    expect(await (await exportedPdf(page)).text(1)).not.toContain('DRAFT');
+  });
+
+  test('shows on every page and goes into the exported file', async ({ page }) => {
+    await openViewer(page, ON);
+    const pages = await page.locator('.pv-page').count();
+    await expect(marks(page)).toHaveCount(pages);
+    await expect(marks(page).first()).toHaveText('CONFIDENTIAL');
+    const saved = await exportedPdf(page);
+    for (let number = 1; number <= saved.pageCount; number++) expect(countOf(await saved.text(number), 'CONFIDENTIAL')).toBe(1);
+  });
+
+  test('can have several lines, on screen and in the file', async ({ page }) => {
+    await openViewer(page, { watermark: true, watermarkText: 'CONFIDENTIAL\n\n  Acme Ltd  \n' });
+    await expect(marks(page).first().locator('tspan')).toHaveText(['CONFIDENTIAL', 'Acme Ltd']);
+    const text = await (await exportedPdf(page)).text(1);
+    expect(countOf(text, 'CONFIDENTIAL')).toBe(1);
+    expect(countOf(text, 'Acme Ltd')).toBe(1);
+  });
+
+  test('several lines also work on rotated pages and with other alphabets', async ({ page }) => {
+    await openViewer(page, { watermark: true, watermarkText: 'First line\nSecond line' }, 'rotated.pdf');
+    const rotated = await (await exportedPdf(page)).text(1);
+    expect(rotated).toContain('First line');
+    expect(rotated).toContain('Second line');
+
+    await openViewer(page, { watermark: true, watermarkText: 'नमस्ते\n你好' });
+    expect((await exportedPdf(page)).pageCount).toBeGreaterThan(0);
+  });
+
+  test('does nothing with blank text', async ({ page }) => {
+    await openViewer(page, { watermark: true, watermarkText: '   ' });
+    await expect(marks(page)).toHaveCount(0);
+  });
+
+  test('is drawn as text, not markup', async ({ page }) => {
+    await openViewer(page, { watermark: true, watermarkText: '<img src=x onerror=alert(1)>' });
+    await expect(marks(page).first()).toHaveText('<img src=x onerror=alert(1)>');
+    await expect(page.locator('.pv-watermark img')).toHaveCount(0);
+  });
+
+  test('does not get in the way of the mouse', async ({ page }) => {
+    await openViewer(page, { ...ON, initialZoom: 'fit-page' });
+    await expect(page.locator('.pv-watermark').first()).toHaveCSS('pointer-events', 'none');
+    await page.getByRole('button', { name: 'Draw a rectangle' }).click();
+    const area = (await page.locator('.pv-page[data-page="1"]').boundingBox())!;
+    await page.mouse.move(area.x + area.width / 2 - 60, area.y + area.height / 2 - 60);
+    await page.mouse.down();
+    await page.mouse.move(area.x + area.width / 2 + 60, area.y + area.height / 2 + 60, { steps: 4 });
+    await page.mouse.up();
+    await expect(page.locator('[data-kind="rect"]')).toHaveCount(1);
+  });
+
+  test('works on rotated pages and with other alphabets', async ({ page }) => {
+    await openViewer(page, ON, 'rotated.pdf');
+    expect(await (await exportedPdf(page)).text(1)).toContain('CONFIDENTIAL');
+
+    await openViewer(page, { watermark: true, watermarkText: 'नमस्ते 你好' });
+    expect((await exportedPdf(page)).pageCount).toBeGreaterThan(0);
+  });
+
+  test('having one does not count as an unsaved change', async ({ page }) => {
+    await openList(page, ON);
+    await row(page, 'report').click();
+    await expect(firstPage(page)).toBeVisible();
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(dialog(page)).toHaveCount(0);
+  });
+
+  test('shows on images and goes into what they export', async ({ page }) => {
+    await page.goto(viewerUrl(ON));
+    await page.waitForFunction(() => Boolean((window as never as { pdfViewer?: unknown }).pdfViewer));
+    await page.locator('input[type="file"]').first().setInputFiles(fixture('photo.png'));
+    await expect(page.locator('.viewer-canvas img')).toBeVisible();
+    await expect(marks(page)).toHaveCount(1);
+    const name = await page.evaluate(async () => (await (window as never as { pdfViewer: { getImageFile(): Promise<{ name: string }> } }).pdfViewer.getImageFile()).name);
+    expect(name).toMatch(/\.png$/);
+    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download', exact: true }).click()]);
+    expect(download.suggestedFilename()).toMatch(/\.png$/);
+  });
+
+  test.describe('with the API', () => {
+    test.beforeEach(async () => {
+      test.skip(!(await isServiceUp()), 'needs the PDF service at localhost:8080');
+    });
+
+    const openTool = async (page: Page, name: string) => {
+      await page.getByRole('button', { name: 'Toggle side panel' }).click();
+      await page.getByRole('button', { name: 'Document tools' }).click();
+      await page.locator('details[data-tool]', { has: page.locator(`summary:text-is("${name}")`) }).locator('summary').click();
+      return page.locator('details[open]', { has: page.locator(`summary:text-is("${name}")`) });
+    };
+
+    test('does not stack up when a tool changes the document', async ({ page }) => {
+      await openViewer(page, ON);
+      const tool = await openTool(page, 'Compress');
+      await tool.getByRole('button', { name: /compress/i }).click();
+      await expect(page.getByRole('status').filter({ hasText: 'Compress: done' })).toBeVisible({ timeout: 30_000 });
+      await expect(marks(page).first()).toBeVisible();
+      expect(countOf(await (await exportedPdf(page)).text(1), 'CONFIDENTIAL')).toBe(1);
+    });
+
+    test('the watermark tool starts with the same text', async ({ page }) => {
+      await openViewer(page, ON);
+      const tool = await openTool(page, 'Watermark');
+      await expect(tool.locator('[name="text"]')).toHaveValue('CONFIDENTIAL');
+    });
+
+    test('the watermark tool joins several lines, as its box only has one', async ({ page }) => {
+      await openViewer(page, { watermark: true, watermarkText: 'First\nSecond' });
+      const tool = await openTool(page, 'Watermark');
+      await expect(tool.locator('[name="text"]')).toHaveValue('First Second');
+    });
+
+    test('a Word file downloads as a PDF, so that it can carry the watermark', async ({ page }) => {
+      await openViewer(page, ON, 'note.docx');
+      const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download', exact: true }).click()]);
+      expect(download.suggestedFilename()).toBe('note.pdf');
+    });
+  });
+
+  test('can be set from the settings screen', async ({ page }) => {
+    await openList(page);
+    await page.locator('summary', { hasText: 'Settings' }).click();
+    const text = page.locator('[data-setting="watermarkText"]');
+    await expect(text).toBeDisabled();
+    await page.locator('[data-setting="watermark"]').check();
+    await expect(text).toBeEnabled();
+    await expect(page.locator('textarea[data-setting="watermarkText"]')).toHaveCount(1);
+    await text.fill('For');
+    await text.press('Enter');
+    await text.pressSequentially('review');
+    await expect(text).toHaveValue('For\nreview');
+    await page.locator('[data-setting="watermarkOpacity"]').selectOption('0.35');
+
+    await row(page, 'report').click();
+    await expect(firstPage(page)).toBeVisible();
+    await expect(marks(page).first().locator('tspan')).toHaveText(['For', 'review']);
+    await expect(marks(page).first()).toHaveAttribute('fill-opacity', '0.35');
+  });
+});
+
+test.describe('saving settings on the server', () => {
+  const setting = (page: Page, key: string) => page.locator(`[data-setting="${key}"]`);
+  const status = (page: Page) => page.locator('.ps-status');
+  const urlFor = (scope: string) => `/?save=server&scope=${scope}`;
+
+  const openPanel = async (page: Page, scope: string) => {
+    await page.goto(urlFor(scope));
+    await expect(row(page, 'report')).toBeVisible();
+    await page.locator('summary', { hasText: 'Settings' }).click();
+    await expect(setting(page, 'clickAction')).toBeVisible();
+  };
+
+  test.describe('with the API', () => {
+    test.beforeEach(async () => {
+      test.skip(!(await isServiceUp()), 'needs the PDF service at localhost:8080');
+    });
+
+    test('choices reach another browser', async ({ page, browser, baseURL }) => {
+      const scope = `test-${randomUUID()}`;
+      await openPanel(page, scope);
+      await setting(page, 'clickAction').selectOption('menu');
+      await setting(page, 'watermark').check();
+      await setting(page, 'watermarkText').fill('Shared');
+      await expect(status(page)).toHaveText('Saved');
+
+      const other = await browser.newContext({ baseURL });
+      const otherPage = await other.newPage();
+      await openPanel(otherPage, scope);
+      await expect(setting(otherPage, 'clickAction')).toHaveValue('menu');
+      await expect(setting(otherPage, 'watermarkText')).toHaveValue('Shared');
+      await row(otherPage, 'report').click();
+      await expect(menu(otherPage)).toBeVisible();
+      await other.close();
+    });
+
+    test('scopes stay separate', async ({ page }) => {
+      const first = `test-${randomUUID()}`;
+      await openPanel(page, first);
+      await setting(page, 'clickAction').selectOption('none');
+      await expect(status(page)).toHaveText('Saved');
+      await openPanel(page, `test-${randomUUID()}`);
+      await expect(setting(page, 'clickAction')).toHaveValue('open');
+    });
+
+    test('reset clears them on the server too', async ({ page }) => {
+      const scope = `test-${randomUUID()}`;
+      await openPanel(page, scope);
+      await setting(page, 'clickAction').selectOption('menu');
+      await expect(status(page)).toHaveText('Saved');
+      await page.getByRole('button', { name: 'Reset to defaults' }).click();
+      await expect(setting(page, 'clickAction')).toHaveValue('open');
+      await page.waitForTimeout(800);
+      await page.reload();
+      await page.locator('summary', { hasText: 'Settings' }).click();
+      await expect(setting(page, 'clickAction')).toHaveValue('open');
+    });
+
+    test('only saves what differs from the defaults', async ({ page, request }) => {
+      const scope = `test-${randomUUID()}`;
+      await openPanel(page, scope);
+      await setting(page, 'allowRename').check();
+      await expect(status(page)).toHaveText('Saved');
+      expect(await (await request.get(`http://localhost:8080/api/settings/${scope}`)).json()).toEqual({ allowRename: true });
+    });
+
+    test('a slow load does not undo a change made in the meantime', async ({ page }) => {
+      const scope = `test-${randomUUID()}`;
+      await page.route(`**/api/settings/${scope}`, async (route) => {
+        if (route.request().method() !== 'GET') return route.continue();
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '{"clickAction":"none"}' });
+      });
+      await openPanel(page, scope);
+      await setting(page, 'clickAction').selectOption('menu');
+      await page.waitForTimeout(1200);
+      await expect(setting(page, 'clickAction')).toHaveValue('menu');
+    });
+  });
+
+  test('a failed save says so, and the choice still applies', async ({ page }) => {
+    await page.route('**/api/settings/**', (route) => (route.request().method() === 'GET' ? route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }) : route.fulfill({ status: 403, contentType: 'application/json', body: '{"error":"Saving settings is turned off."}' })));
+    await openPanel(page, 'unsaved');
+    await setting(page, 'clickAction').selectOption('menu');
+    await expect(status(page)).toContainText("Couldn't save. Saving settings is turned off.");
+    await row(page, 'report').click();
+    await expect(menu(page)).toBeVisible();
+  });
+
+  test('a failed load says so, and the page still works', async ({ page }) => {
+    await page.route('**/api/settings/**', (route) => route.abort());
+    await openPanel(page, 'offline');
+    await expect(status(page)).toContainText("Couldn't load the saved settings.");
+    await row(page, 'report').click();
+    await expect(dialog(page)).toBeVisible();
+  });
+
+  test('saved values that make no sense are ignored', async ({ page }) => {
+    await page.route('**/api/settings/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"clickAction":"explode","allowRename":"yes","unknown":1,"__proto__":{"polluted":true},"showFileDetails":false}' }));
+    await openPanel(page, 'junk');
+    await expect(page.locator('.pl-meta')).toHaveCount(0);
+    await expect(setting(page, 'clickAction')).toHaveValue('open');
+    await expect(setting(page, 'allowRename')).not.toBeChecked();
+    expect(await page.evaluate(() => ({} as Record<string, unknown>).polluted)).toBeUndefined();
+  });
+
+  test('without ?save=server, nothing is sent', async ({ page }) => {
+    const calls: string[] = [];
+    page.on('request', (item) => {
+      if (item.url().includes('/api/settings')) calls.push(item.url());
+    });
+    await openList(page);
+    await page.locator('summary', { hasText: 'Settings' }).click();
+    await setting(page, 'clickAction').selectOption('menu');
+    await page.waitForTimeout(700);
+    expect(calls).toEqual([]);
+  });
+});
+
+test.describe('bar positions', () => {
+  type Box = { x: number; y: number; width: number; height: number };
+  const SIDES = ['top', 'bottom', 'left', 'right'] as const;
+
+  const isOnSide = (side: (typeof SIDES)[number], bar: Box, content: Box) => {
+    if (side === 'top') return bar.y + bar.height <= content.y + 1;
+    if (side === 'bottom') return bar.y >= content.y + content.height - 1;
+    if (side === 'left') return bar.x + bar.width <= content.x + 1;
+    return bar.x >= content.x + content.width - 1;
+  };
+
+  const open = async (page: Page, settings: object) => {
+    await openList(page, settings);
+    await row(page, 'report').click();
+    await expect(firstPage(page)).toBeVisible();
+  };
+
+  for (const side of SIDES) {
+    test(`the toolbar can go on the ${side}, with everything still in reach`, async ({ page }) => {
+      await open(page, { toolbarPosition: side });
+      const toolbar = page.getByRole('toolbar', { name: 'Document tools' });
+      const scroll = (await page.locator('.pv-scroll').boundingBox())!;
+      expect(isOnSide(side, (await toolbar.boundingBox())!, scroll)).toBe(true);
+      expect(scroll.width).toBeGreaterThan(300);
+      expect(scroll.height).toBeGreaterThan(300);
+
+      const frame = (await dialog(page).boundingBox())!;
+      const close = (await page.getByRole('button', { name: 'Close', exact: true }).boundingBox())!;
+      expect(close.y).toBeGreaterThanOrEqual(frame.y);
+
+      const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download', exact: true }).click()]);
+      expect(download.suggestedFilename()).toBe('Annual report.pdf');
+    });
+
+    test(`with the toolbar on the ${side}, the title bar stays at the top`, async ({ page }) => {
+      await open(page, { toolbarPosition: side });
+      const header = (await page.locator('.pm-header').boundingBox())!;
+      const viewer = (await page.locator('.pm-viewer').boundingBox())!;
+      expect(isOnSide('top', header, viewer)).toBe(true);
+    });
+  }
+
+  test('a side toolbar fits a normal window without scrolling', async ({ page }) => {
+    await open(page, { toolbarPosition: 'left' });
+    const fits = await page.getByRole('toolbar', { name: 'Document tools' }).evaluate((element) => element.scrollHeight <= element.clientHeight && element.scrollWidth <= element.clientWidth);
+    expect(fits).toBe(true);
+    await expect(page.getByRole('button', { name: 'Download', exact: true })).toBeInViewport();
+    await expect(page.locator('.pv-toolbar .pv-group:empty')).toBeHidden();
+  });
+
+  for (const side of ['left', 'right'] as const) {
+    test(`a toolbar on the ${side} keeps related controls together`, async ({ page }) => {
+      await open(page, { toolbarPosition: side });
+      const box = async (label: string) => (await page.getByLabel(label, { exact: true }).boundingBox())!;
+      const sameRow = async (first: string, second: string) => {
+        const [a, b] = [await box(first), await box(second)];
+        expect(Math.abs(a.y + a.height / 2 - (b.y + b.height / 2))).toBeLessThan(2);
+        expect(a.x).toBeLessThan(b.x);
+      };
+      await sameRow('Previous page', 'Next page');
+      await sameRow('Zoom out', 'Zoom in');
+      await sameRow('Undo', 'Redo');
+
+      const input = await box('Page number');
+      const total = (await page.locator('.pv-page-total').boundingBox())!;
+      expect(Math.abs(input.y + input.height / 2 - (total.y + total.height / 2))).toBeLessThan(2);
+      expect(total.x).toBeGreaterThan(input.x + input.width - 1);
+      expect((await box('Zoom level')).y).toBeGreaterThan((await box('Zoom in')).y);
+
+      const toolbar = page.getByRole('toolbar', { name: 'Document tools' });
+      const area = (await toolbar.boundingBox())!;
+      expect(total.x + total.width).toBeLessThanOrEqual(area.x + area.width);
+      expect(await toolbar.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    });
+  }
+
+  test('a side toolbar can reach everything in a short window', async ({ page }) => {
+    await page.setViewportSize({ width: 1000, height: 420 });
+    await open(page, { toolbarPosition: 'right' });
+    const download = page.getByRole('button', { name: 'Download', exact: true });
+    await download.scrollIntoViewIfNeeded();
+    await expect(download).toBeInViewport();
+  });
+
+  test('the search bar still opens with a side toolbar', async ({ page }) => {
+    await open(page, { toolbarPosition: 'left' });
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await expect(page.getByLabel('Find in document')).toBeVisible();
+    const toolbar = (await page.getByRole('toolbar', { name: 'Document tools' }).boundingBox())!;
+    const search = (await page.getByLabel('Find in document').boundingBox())!;
+    expect(search.x).toBeGreaterThanOrEqual(toolbar.x + toolbar.width);
+  });
+
+  test('the position comes from settings, and dragging a bar does not change it', async ({ page }) => {
+    await open(page, { toolbarPosition: 'left' });
+    const toolbar = page.getByRole('toolbar', { name: 'Document tools' });
+    const before = (await toolbar.boundingBox())!;
+    await page.mouse.move(before.x + before.width / 2, before.y + before.height * 0.75);
+    await page.mouse.down();
+    await page.mouse.move(before.x + 600, before.y + 200, { steps: 5 });
+    await page.mouse.up();
+    expect(await toolbar.boundingBox()).toEqual(before);
+    await expect(page.locator('.pv-root')).toHaveAttribute('data-toolbar-position', 'left');
+    await expect(page.locator('.pv-toolbar [draggable="true"], .pm-header [draggable="true"]')).toHaveCount(0);
+
+    const windowBefore = (await dialog(page).boundingBox())!;
+    const title = (await page.locator('.pm-title').boundingBox())!;
+    await page.mouse.move(title.x + 10, title.y + 8);
+    await page.mouse.down();
+    await page.mouse.move(title.x + 90, title.y + 58, { steps: 4 });
+    await page.mouse.up();
+    await expect(page.locator('.pv-root')).toHaveAttribute('data-toolbar-position', 'left');
+    expect(Math.round((await dialog(page).boundingBox())!.x - windowBefore.x)).toBe(80);
+  });
+
+  for (const side of SIDES) {
+    test(`the toolbar can go on the ${side} for images too`, async ({ page }) => {
+      await openList(page, { toolbarPosition: side });
+      await row(page, 'photo').click();
+      await expect(page.locator('.viewer-canvas img')).toBeVisible();
+      const toolbar = page.getByRole('toolbar', { name: 'Document tools' });
+      const body = (await page.locator('.pv-body').boundingBox())!;
+      expect(isOnSide(side, (await toolbar.boundingBox())!, body)).toBe(true);
+      await expect(page.getByRole('button', { name: 'Download', exact: true })).toBeInViewport();
+      await expect(page.getByRole('button', { name: 'Rotate left' })).toBeInViewport();
+    });
+  }
+
+  test('a title bar position saved earlier is ignored', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('pdf-suite-demo-settings', JSON.stringify({ modalHeaderPosition: 'left', toolbarPosition: 'left' })));
+    await openList(page);
+    await row(page, 'report').click();
+    await expect(firstPage(page)).toBeVisible();
+    await expect(page.locator('.pv-root')).toHaveAttribute('data-toolbar-position', 'left');
+    const header = (await page.locator('.pm-header').boundingBox())!;
+    expect(isOnSide('top', header, (await page.locator('.pm-viewer').boundingBox())!)).toBe(true);
+  });
+
+  test('can be chosen on the settings screen', async ({ page }) => {
+    await openList(page);
+    await page.locator('summary', { hasText: 'Settings' }).click();
+    await page.locator('[data-setting="toolbarPosition"]').selectOption('right');
+    await row(page, 'report').click();
+    await expect(firstPage(page)).toBeVisible();
+    await expect(page.locator('.pv-root')).toHaveAttribute('data-toolbar-position', 'right');
   });
 });

@@ -17,6 +17,7 @@ playwright-report/
 viewer/e2e/.fixtures/
 
 # Local settings and secrets
+backend/PdfAI.API/data/
 .env
 .vscode/
 appsettings.Development.json

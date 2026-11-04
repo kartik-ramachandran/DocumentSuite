@@ -2,7 +2,7 @@ import { afterNextRender, Component, signal, viewChild } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { FileListComponent, PdfViewerComponent, SettingsPanelComponent, type FileItem, type FileListOptions, type ViewerOptions } from '@pdf-suite/angular';
 import { createEditorPlugin } from '@pdf-suite/editor';
-import { applyDemoSettings } from '../../shared/demo-settings';
+import { applyDemoSettings, demoPanelOptions } from '../../shared/demo-settings';
 import { createSampleFiles, filesFromInput } from '../../shared/sample-files';
 
 // Query parameters let the same demo run every mode: ?view=viewer&mode=server&transport=json&editor=0&rename=1
@@ -53,7 +53,7 @@ class ViewerDemoComponent {
 })
 class FilesDemoComponent {
   readonly files = signal<FileItem[]>([]);
-  readonly panelOptions = { storageKey: 'pdf-suite-demo-settings' };
+  readonly panelOptions = demoPanelOptions(params.get('service') ?? 'http://localhost:8080');
   readonly options: Omit<FileListOptions, 'files'> = {
     viewer: viewerOptions,
     menuItems: [{ id: 'remove', label: 'Remove from list', danger: true, separator: true, onSelect: (file) => this.files.update((current) => current.filter((item) => item !== file)) }],

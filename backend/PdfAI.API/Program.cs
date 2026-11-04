@@ -40,6 +40,7 @@ builder.Services.AddCors(options =>
 
 AddPdfServices(builder.Services);
 builder.Services.AddSingleton<ViewerDocumentStore>();
+builder.Services.AddSingleton<ViewerSettingsStore>();
 
 // MCP tools read and write server files, so the HTTP endpoint only exists once a key and folder are configured.
 var mcpApiKey = builder.Configuration["Mcp:ApiKey"];

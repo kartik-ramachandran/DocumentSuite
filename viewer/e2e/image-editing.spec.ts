@@ -124,6 +124,8 @@ test.describe('one toolbar', () => {
     await page.getByRole('button', { name: 'Toggle side panel' }).click();
     await page.setViewportSize({ width: 800, height: 600 });
     await expect.poll(async () => (await shownImage(page).boundingBox())!.width).toBeLessThan(before);
+    // The side panel and the window each resize it, so this waits for both to have happened.
+    await expect.poll(async () => (await shownImage(page).boundingBox())!.width - (await page.locator('.pv-image').boundingBox())!.width).toBeLessThanOrEqual(0);
     const host = (await page.locator('.pv-image').boundingBox())!;
     const image = (await shownImage(page).boundingBox())!;
     expect(image.width).toBeLessThanOrEqual(host.width);
@@ -557,4 +559,19 @@ test.describe('document tools on images', () => {
     await openTools(page);
     await expect(page.getByText('Document tools need a PDF service')).toBeVisible();
   });
+});
+
+test('comments on images open when clicked, rather than starting another', async ({ page }) => {
+  await openDemo(page, demoUrl());
+  await openImage(page);
+  await page.getByRole('button', { name: 'Add a comment' }).click();
+  await dragOnImage(page, [0.5, 0.5], [0.5, 0.5]);
+  await page.getByRole('dialog', { name: 'Add a comment' }).getByRole('textbox').fill('On the photo');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('button', { name: 'Add a comment' })).toHaveAttribute('aria-pressed', 'false');
+
+  await page.locator('[data-kind="note"]').click();
+  await expect(page.getByRole('dialog', { name: 'Edit comment' }).getByRole('textbox')).toHaveValue('On the photo');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.locator('[data-kind="note"]')).toHaveCount(1);
 });

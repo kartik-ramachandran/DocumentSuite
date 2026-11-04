@@ -121,7 +121,7 @@ export interface ViewerContext {
   addSidebarPanel(panel: SidebarPanel): void;
   addExportStep(step: ExportStep): void;
   addPrintPainter(painter: PrintPainter): void;
-  /** Reports whether a plugin has changed the open image, so that exports need its drawing added. */
+  /** Reports whether a plugin adds to exports, so that the file as uploaded can't be used as it is. */
   addImageChangeCheck(check: () => boolean): void;
   /** The raw PDF.js document in client mode, otherwise null. */
   getPdfJsDocument(): unknown;

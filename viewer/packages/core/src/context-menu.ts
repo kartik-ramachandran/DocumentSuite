@@ -64,6 +64,7 @@ export function openContextMenu(x: number, y: number, items: ContextMenuItem[], 
     document.removeEventListener('pointerdown', handleOutsidePointer, true);
     window.removeEventListener('blur', closeOnly);
     window.removeEventListener('resize', closeOnly);
+    cancelAnimationFrame(scrollListenFrame);
     document.removeEventListener('scroll', closeOnly, true);
     document.removeEventListener('contextmenu', handleOutsideContextMenu, true);
     host.remove();
@@ -138,7 +139,8 @@ export function openContextMenu(x: number, y: number, items: ContextMenuItem[], 
 
   document.addEventListener('pointerdown', handleOutsidePointer, true);
   document.addEventListener('contextmenu', handleOutsideContextMenu, true);
-  document.addEventListener('scroll', closeOnly, true);
+  // A scroll that finished just before the menu opened still sends its event in the next frame, and that mustn't close it.
+  const scrollListenFrame = requestAnimationFrame(() => document.addEventListener('scroll', closeOnly, true));
   window.addEventListener('blur', closeOnly);
   window.addEventListener('resize', closeOnly);
 

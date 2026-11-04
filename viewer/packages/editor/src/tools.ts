@@ -1,4 +1,5 @@
 import { base64ToBytes, bytesToBase64, type ServiceResult, type ViewerContext } from '@pdf-suite/viewer';
+import type { WatermarkController } from './watermark';
 
 export const TOOLS_CSS = `
 .pv-tools { display: flex; flex-direction: column; gap: 2px; padding: 8px; }
@@ -73,12 +74,15 @@ export class ToolsController {
   constructor(
     private readonly context: ViewerContext,
     private readonly hasService: boolean,
+    private readonly watermark: WatermarkController,
   ) {}
 
   install(): void {
     this.context.addStyles(TOOLS_CSS);
     this.panel.className = 'pv-tools';
     this.build();
+    const watermarkText = this.panel.querySelector<HTMLInputElement>('details[data-tool="watermark"] [name="text"]');
+    if (watermarkText && this.context.settings.watermarkText) watermarkText.value = this.context.settings.watermarkText.trim().replace(/\s*\n\s*/g, ' ');
     this.context.addSidebarPanel({
       id: 'tools',
       label: 'Document tools',
@@ -295,7 +299,8 @@ export class ToolsController {
     this.setDisabled(true);
     try {
       const isImage = viewer.kind === 'image';
-      const { bytes, name } = isImage ? await viewer.getImageFile() : { bytes: await viewer.getBytes(), name: viewer.fileName };
+      const read = async () => (isImage ? viewer.getImageFile() : { bytes: await viewer.getBytes(), name: viewer.fileName });
+      const { bytes, name } = tool.download ? await read() : await this.watermark.withoutWatermark(read);
       const pdfName = name.replace(/\.[^.]+$/, '') + '.pdf';
       const pdf = isImage ? await this.convertImageToPdf(bytes, name) : bytes;
       let operation = tool.operation;

@@ -9,6 +9,19 @@ An open-source PDF and image viewer and editor for React, Vue, Angular and plain
 - **Two rendering modes:** in the browser, so documents stay on the device, or on your server
 - **Other formats:** with the API, it also opens Word, Excel, PowerPoint, HTML, Markdown and text files
 
+## Screenshots
+
+| | |
+|---|---|
+| ![A list of files with the right-click menu open on one of them](../docs/screenshots/file-list.png) | ![A report in the viewer window with annotations on it](../docs/screenshots/viewer-modal.png) |
+| **File list** with a right-click menu | **Viewer window** with annotations |
+| ![The side panel showing the document tools, with the Watermark tool open](../docs/screenshots/document-tools.png) | ![A photo in the viewer, with image rotate and flip buttons in the toolbar](../docs/screenshots/image-viewer.png) |
+| **Document tools**, with the API | **Images** open automatically |
+| ![A report with CONFIDENTIAL written diagonally across the page](../docs/screenshots/watermark.png) | ![The viewer with its toolbar down the left side](../docs/screenshots/toolbar-left.png) |
+| **Watermark** setting | **Toolbar** on the left, set in settings |
+
+All of these use generated sample files. To retake them, follow the steps at the top of [`scripts/take-screenshots.mjs`](scripts/take-screenshots.mjs).
+
 ## Install
 
 The packages aren't on npm yet. To use them now, build them from this repository, as described in [CONTRIBUTING.md](../CONTRIBUTING.md).
@@ -184,6 +197,8 @@ const saved = editor.annotations.getAnnotations();
 editor.annotations.setAnnotations(saved);
 ```
 
+After you add a comment or text, the tool turns itself off. Click a comment to read or edit it, or hover over it to read it. With the Select tool, double-click a comment or text to edit it, or drag anything to move it. Saving a comment or text with nothing in it deletes it.
+
 In exported PDFs, drawings, highlights, text and pictures become page content, comments become real PDF comments, and form values stay in their fields. The same tools work on images, which export as a PNG at full resolution.
 
 ## Settings
@@ -219,6 +234,7 @@ File lists update straight away. Viewers read their settings when they're create
 | `showMenuButton` | `true` | Shows the ⋮ button on each file |
 | `showFileDetails` | `true` | Shows each file's size and date |
 | **Viewer window** | | |
+| `toolbarPosition` | `'top'` | Which side the toolbar is on: `'top'`, `'bottom'`, `'left'` or `'right'` |
 | `modalResizable` | `true` | Can be resized from its edges and corners |
 | `modalMovable` | `true` | Can be moved by its title bar |
 | `modalMaximizable` | `true` | Can be maximized |
@@ -242,12 +258,22 @@ File lists update straight away. Viewers read their settings when they're create
 | `annotations` | `true` | Annotation tools |
 | `formFilling` | `true` | Fillable form fields |
 | `documentTools` | `true` | The document tools panel |
+| **Watermark, with the editor plugin** | | |
+| `watermark` | `false` | Shows a watermark on every page, and adds it to prints and downloads |
+| `watermarkText` | `'DRAFT'` | The text, which can have several lines. It also fills in the Watermark document tool |
+| `watermarkOpacity` | `0.2` | How visible it is, from 0 to 1 |
 
-**These settings shape the interface, and aren't security controls.** Turning off downloads or printing only removes the buttons. Anyone who can view a document in a browser can still save it, so protect sensitive documents on your server.
+**These settings shape the interface, and aren't security controls.** Turning off downloads or printing only removes the buttons, and the watermark is added in the browser. Anyone who can view a document in a browser can still save it without them, so protect sensitive documents on your server. To guarantee a watermark, add it with the API's `/api/pdf/watermark` route before the document reaches the browser.
+
+With a watermark on, a converted file such as a Word document downloads as a PDF, because that's what can carry the watermark. Images download as PNG. Document tools that change the open document work on it without the watermark, so that it can't stack up.
+
+The toolbar's position only changes through this setting. It can't be dragged to another side.
 
 ### A settings screen
 
 `SettingsPanel` is a ready-made screen for all of these, which you can put on your app's settings page. Choices apply straight away.
+
+![The settings screen, with groups for the file list, viewer window, downloads, viewer, editing and watermark](../docs/screenshots/settings-panel.png)
 
 ```tsx
 <SettingsPanel
@@ -257,7 +283,29 @@ File lists update straight away. Viewers read their settings when they're create
 />
 ```
 
-In Vue, pass these through `:options`, and in Angular use `<pdf-suite-settings-panel [options]="...">`. Saved choices load when the panel appears, so if it's on a separate page, also call `configureViewer(JSON.parse(localStorage.getItem('my-app-viewer-settings') ?? '{}'))` when your app starts. To store settings on your server instead, leave out `storageKey`, save them from `onChange`, and call `configureViewer(saved)` when your app starts. To build your own screen, `SETTINGS_SCHEMA` describes every setting.
+In Vue, pass these through `:options`, and in Angular use `<pdf-suite-settings-panel [options]="...">`. Saved choices load when the panel appears, so if it's on a separate page, also call `configureViewer(JSON.parse(localStorage.getItem('my-app-viewer-settings') ?? '{}'))` when your app starts. To build your own screen, `SETTINGS_SCHEMA` describes every setting.
+
+### Saving settings on the server
+
+The PDF API can keep settings for you, so that they follow people between browsers. Give the panel the API's address, and a `scope` that says whose settings they are, such as an app, team or user:
+
+```tsx
+<SettingsPanel serviceUrl="https://pdf.example.com" scope="team-a" serviceHeaders={{ Authorization: `Bearer ${token}` }} />
+```
+
+Choices are saved shortly after they change, and the panel says if saving fails. To apply them before anything opens, also load them when your app starts:
+
+```ts
+import { loadViewerSettings } from '@pdf-suite/viewer';
+
+await loadViewerSettings({ serviceUrl: 'https://pdf.example.com', scope: 'team-a' });
+```
+
+`saveViewerSettings(options)` saves from your own code. If your app already stores settings for its users, you don't need the API for this: leave out `serviceUrl`, save them from `onChange`, and call `configureViewer(saved)` when your app starts.
+
+Deployed instances refuse changes until you set a write key, so read the [API's notes on this](../README.md#viewer-settings) first. A key sent from a browser can be read by its users, so for anything beyond a trusted internal app, have your backend or gateway add it.
+
+To try it in the demos, add `?save=server` to the address.
 
 ## Options
 

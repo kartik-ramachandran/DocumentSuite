@@ -13,6 +13,7 @@ This service processes untrusted documents using large native tools. **Don't exp
 | Area | Current behaviour | What to do |
 |---|---|---|
 | Authentication | The REST API has none. `/mcp` requires an API key | Put the API behind an authenticating gateway |
+| Viewer settings | Anyone can read them, and writes need `Settings__WriteKey` outside development. The compose file runs in development, so it accepts writes with no key | Set the key, and don't store secrets in settings |
 | Rate limits | None, and each conversion can use a lot of CPU and memory | Limit requests per client at your gateway, and set container CPU and memory limits |
 | Container user | Runs as root | Run it with a non-root user and a read-only filesystem where you can |
 | HTML to PDF | Chrome renders uploaded HTML with its sandbox off, which could expose local files or internal network addresses | Isolate the container and restrict its outbound network access, or disable these routes at your gateway |

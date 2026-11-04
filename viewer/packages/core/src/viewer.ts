@@ -137,6 +137,8 @@ export class PdfViewer {
     toolbar.setAttribute('role', 'toolbar');
     toolbar.setAttribute('aria-label', 'Document tools');
     if (options.toolbar === false) toolbar.hidden = true;
+    this.root.dataset.toolbarPosition = this.settings.toolbarPosition;
+    if (this.settings.toolbarPosition === 'left' || this.settings.toolbarPosition === 'right') toolbar.setAttribute('aria-orientation', 'vertical');
     this.mainGroup = element('div', 'pv-spacer');
     this.pluginGroup = element('div', 'pv-group');
     this.pluginGroup.hidden = true;
@@ -241,7 +243,6 @@ export class PdfViewer {
       if (!isPdf(loaded)) {
         original = loaded;
         if (!this.service.isConfigured) throw new Error(`Opening ${loaded.name} needs a PDF service. Set the serviceUrl option.`);
-        this.showOverlay('Converting document…');
         loaded = { bytes: await this.service.convertToPdf(loaded.bytes, loaded.name), name: loaded.name.replace(/\.[^.]+$/, '') + '.pdf' };
         if (token !== this.loadToken) return;
       }
@@ -338,7 +339,7 @@ export class PdfViewer {
    */
   async download(fileName?: string): Promise<boolean> {
     try {
-      const useOriginal = this.originalFile !== null && !this.unsaved;
+      const useOriginal = this.originalFile !== null && !this.unsaved && !this.isImageEdited();
       const isImage = this.kind === 'image';
       const bytes = useOriginal ? this.originalFile!.bytes : await this.getBytes();
       const defaultName = useOriginal ? this.originalFile!.name : isImage && this.isImageEdited() ? nameForType(this.documentName, 'image/png') : isImage ? this.documentName : pdfFileName(this.documentName);

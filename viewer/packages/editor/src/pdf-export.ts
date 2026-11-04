@@ -1,5 +1,6 @@
 import { degrees, PDFDocument, PDFName, PDFPage, PDFString, pushGraphicsState, popGraphicsState, setFillingRgbColor, setStrokingRgbColor, setLineWidth, setLineCap, setLineJoin, moveTo, lineTo, closePath, fill, stroke, rgb, StandardFonts, LineCapStyle, LineJoinStyle, setGraphicsState, PDFFont } from 'pdf-lib';
 import type { Annotation, Point } from './annotation-types';
+import { WATERMARK_LINE_HEIGHT, watermarkFontSize, watermarkLines } from './watermark';
 
 const HIGHLIGHT_OPACITY = 0.4;
 const TEXT_LINE_HEIGHT = 1.2;
@@ -82,6 +83,44 @@ function textToPng(text: string, fontSize: number, color: string): { dataUrl: st
   context.textBaseline = 'top';
   lines.forEach((line, index) => context.fillText(line, 0, index * fontSize * TEXT_LINE_HEIGHT * quality));
   return { dataUrl: canvas.toDataURL('image/png'), width: canvas.width / quality, height: canvas.height / quality };
+}
+
+/** Draws text diagonally across the middle of every page, as it appears on screen. */
+export async function writeWatermark(bytes: Uint8Array, text: string, opacity: number, color: string, angle: number): Promise<Uint8Array> {
+  const document = await PDFDocument.load(bytes);
+  const font = await document.embedFont(StandardFonts.HelveticaBold);
+  const lines = watermarkLines(text);
+  const encodable = canEncode(font, lines.join(''));
+
+  for (const page of document.getPages()) {
+    const { map, rotation } = createPageMapper(page);
+    const box = page.getCropBox();
+    const shown = rotation === 90 || rotation === 270 ? { width: box.height, height: box.width } : { width: box.width, height: box.height };
+    const fontSize = watermarkFontSize(text, shown);
+    const center = map(shown.width / 2, shown.height / 2);
+    const radians = ((angle + rotation) * Math.PI) / 180;
+    for (const [index, line] of lines.entries()) {
+      // Each line sits further down the page, measured across the angle of the text.
+      const offset = (index - (lines.length - 1) / 2) * fontSize * WATERMARK_LINE_HEIGHT;
+      const middle = { x: center.x + offset * Math.sin(radians), y: center.y - offset * Math.cos(radians) };
+      // PDF text is placed by its starting corner, so this steps back from the middle along the angle of the text.
+      const cornerFor = (width: number, height: number) => ({
+        x: middle.x - (width / 2) * Math.cos(radians) + (height / 2) * Math.sin(radians),
+        y: middle.y - (width / 2) * Math.sin(radians) - (height / 2) * Math.cos(radians),
+      });
+
+      if (encodable) {
+        const corner = cornerFor(font.widthOfTextAtSize(line, fontSize), font.heightAtSize(fontSize, { descender: false }));
+        page.drawText(line, { ...corner, size: fontSize, font, color: hexToRgb(color), opacity, rotate: degrees(angle + rotation) });
+      } else {
+        const picture = textToPng(line, fontSize, color);
+        const image = await document.embedPng(picture.dataUrl);
+        page.drawImage(image, { ...cornerFor(picture.width, picture.height), width: picture.width, height: picture.height, opacity, rotate: degrees(angle + rotation) });
+      }
+    }
+  }
+
+  return document.save();
 }
 
 /** Writes annotations into a PDF. Drawings become page content, and notes become real PDF comments. */

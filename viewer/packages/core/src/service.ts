@@ -19,7 +19,15 @@ export class ServiceClient {
   }
 
   async request(path: string, init: RequestInit = {}): Promise<Response> {
-    const response = await fetch(this.url(path), { ...init, headers: { ...this.headers, ...init.headers } });
+    const url = this.url(path);
+    let response: Response;
+    try {
+      response = await fetch(url, { ...init, headers: { ...this.headers, ...init.headers } });
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') throw error;
+      // fetch only rejects when no response arrives, and its own message doesn't say what to check.
+      throw new Error(`Couldn't reach the PDF service at ${this.baseUrl}. Check that it's running and accepts requests from this site.`);
+    }
     if (!response.ok) throw new Error(await readError(response));
     return response;
   }

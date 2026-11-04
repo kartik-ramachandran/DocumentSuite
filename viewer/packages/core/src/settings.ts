@@ -1,5 +1,7 @@
 import type { RenderMode, ZoomValue } from './types';
 
+export type BarPosition = 'top' | 'bottom' | 'left' | 'right';
+
 /** Everything about how the viewer behaves. Set app-wide with configureViewer, or per component with the settings option. */
 export interface PdfSuiteSettings {
   // File list
@@ -15,6 +17,8 @@ export interface PdfSuiteSettings {
   showFileDetails: boolean;
 
   // Modal
+  /** Which side of the viewer its toolbar is on. */
+  toolbarPosition: BarPosition;
   modalResizable: boolean;
   modalMovable: boolean;
   modalMaximizable: boolean;
@@ -46,6 +50,13 @@ export interface PdfSuiteSettings {
   annotations: boolean;
   formFilling: boolean;
   documentTools: boolean;
+
+  // Watermark, with the editor plugin
+  /** Shows a watermark on every page, and adds it to prints and downloads. */
+  watermark: boolean;
+  watermarkText: string;
+  /** How visible it is, from 0 to 1. */
+  watermarkOpacity: number;
 }
 
 export const DEFAULT_SETTINGS: Readonly<PdfSuiteSettings> = Object.freeze({
@@ -55,6 +66,7 @@ export const DEFAULT_SETTINGS: Readonly<PdfSuiteSettings> = Object.freeze({
   showMenuButton: true,
   showFileDetails: true,
 
+  toolbarPosition: 'top',
   modalResizable: true,
   modalMovable: true,
   modalMaximizable: true,
@@ -78,6 +90,10 @@ export const DEFAULT_SETTINGS: Readonly<PdfSuiteSettings> = Object.freeze({
   annotations: true,
   formFilling: true,
   documentTools: true,
+
+  watermark: false,
+  watermarkText: 'DRAFT',
+  watermarkOpacity: 0.2,
 });
 
 let appSettings: Partial<PdfSuiteSettings> = {};
@@ -104,6 +120,12 @@ export function getViewerSettings(): PdfSuiteSettings {
   return { ...DEFAULT_SETTINGS, ...appSettings };
 }
 
+/** Only the settings that differ from the defaults. This is what gets saved, so that a later change to a default still applies. */
+export function getChangedSettings(): Partial<PdfSuiteSettings> {
+  const settings = getViewerSettings();
+  return Object.fromEntries(Object.entries(settings).filter(([key, value]) => value !== DEFAULT_SETTINGS[key as keyof PdfSuiteSettings])) as Partial<PdfSuiteSettings>;
+}
+
 /** Calls back whenever the app-wide settings change. Returns a function that stops it. */
 export function onViewerSettingsChange(listener: () => void): () => void {
   listeners.add(listener);
@@ -123,8 +145,12 @@ export interface SettingOption {
 export interface SettingDefinition {
   key: keyof PdfSuiteSettings;
   label: string;
-  /** A list of choices. Without one, the setting is an on/off switch. */
+  /** A list of choices. Without this or text, the setting is an on/off switch. */
   options?: SettingOption[];
+  /** The setting is typed into a text area, and can have several lines. */
+  text?: boolean;
+  /** This setting only matters while the named on/off setting is on. */
+  enabledBy?: keyof PdfSuiteSettings;
 }
 
 export interface SettingGroup {
@@ -136,6 +162,13 @@ const ACTIONS: SettingOption[] = [
   { value: 'open', label: 'Open the file' },
   { value: 'menu', label: 'Show the menu' },
   { value: 'none', label: 'Do nothing' },
+];
+
+const POSITIONS: SettingOption[] = [
+  { value: 'top', label: 'Top' },
+  { value: 'bottom', label: 'Bottom' },
+  { value: 'left', label: 'Left' },
+  { value: 'right', label: 'Right' },
 ];
 
 /** Describes every setting, for building a settings screen. */
@@ -153,6 +186,7 @@ export const SETTINGS_SCHEMA: readonly SettingGroup[] = [
   {
     title: 'Viewer window',
     settings: [
+      { key: 'toolbarPosition', label: 'Toolbar position', options: POSITIONS },
       { key: 'modalResizable', label: 'Can be resized' },
       { key: 'modalMovable', label: 'Can be moved' },
       { key: 'modalMaximizable', label: 'Can be maximized' },
@@ -166,7 +200,7 @@ export const SETTINGS_SCHEMA: readonly SettingGroup[] = [
     title: 'Downloads',
     settings: [
       { key: 'allowDownload', label: 'Allow downloads' },
-      { key: 'allowRename', label: 'Ask for a file name when downloading' },
+      { key: 'allowRename', label: 'Ask for a file name when downloading', enabledBy: 'allowDownload' },
     ],
   },
   {
@@ -194,4 +228,29 @@ export const SETTINGS_SCHEMA: readonly SettingGroup[] = [
       { key: 'documentTools', label: 'Document tools' },
     ],
   },
+  {
+    title: 'Watermark',
+    settings: [
+      { key: 'watermark', label: 'Add a watermark to every page' },
+      { key: 'watermarkText', label: 'Text', text: true, enabledBy: 'watermark' },
+      { key: 'watermarkOpacity', label: 'Strength', options: [{ value: 0.1, label: 'Light' }, { value: 0.2, label: 'Medium' }, { value: 0.35, label: 'Strong' }], enabledBy: 'watermark' },
+    ],
+  },
 ];
+
+/** Keeps only known settings with sensible values, for settings that come from storage or a server. */
+export function sanitizeSettings(values: unknown): Partial<PdfSuiteSettings> {
+  if (!values || typeof values !== 'object' || Array.isArray(values)) return {};
+  const result: Record<string, unknown> = {};
+  for (const setting of SETTINGS_SCHEMA.flatMap((group) => group.settings)) {
+    if (!Object.hasOwn(values, setting.key)) continue;
+    const value = (values as Record<string, unknown>)[setting.key];
+    const isValid = setting.options
+      ? setting.options.some((option) => option.value === value) || (setting.key === 'initialZoom' && typeof value === 'number' && value > 0)
+      : setting.text
+        ? typeof value === 'string'
+        : typeof value === 'boolean';
+    if (isValid) result[setting.key] = value;
+  }
+  return result as Partial<PdfSuiteSettings>;
+}

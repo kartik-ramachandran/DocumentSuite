@@ -2,7 +2,7 @@ import { FileList, PdfViewer, SettingsPanel, type FileItem, type PdfViewerInstan
 import { createEditorPlugin } from '@pdf-suite/editor';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { applyDemoSettings } from '../../shared/demo-settings';
+import { applyDemoSettings, demoPanelOptions } from '../../shared/demo-settings';
 import { createSampleFiles, filesFromInput } from '../../shared/sample-files';
 
 // Query parameters let the same demo run every mode: ?view=viewer&mode=server&transport=json&editor=0&rename=1
@@ -54,7 +54,7 @@ function FilesDemo() {
       </p>
       <details style={{ marginBottom: 16 }}>
         <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Settings</summary>
-        <div style={{ marginTop: 12 }}><SettingsPanel storageKey="pdf-suite-demo-settings" /></div>
+        <div style={{ marginTop: 12 }}><SettingsPanel {...demoPanelOptions(viewerOptions(null).serviceUrl!)} /></div>
       </details>
       <FileList
         files={files}

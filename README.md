@@ -13,6 +13,8 @@ An open-source toolkit for working with PDFs and office documents: a REST API, a
 
 Everything runs on your own infrastructure, so documents stay with you.
 
+![The viewer open in a window, with a highlight, a rectangle, a text note and a comment on a sample report](docs/screenshots/viewer-modal.png)
+
 ## Quick start
 
 You need Docker.
@@ -328,6 +330,20 @@ These routes support the viewer's server mode. Uploaded documents are temporary:
 | GET | `/api/pdf/viewer/documents/{id}/pages/{page}/text` | The page's words and positions, using OCR on scanned pages |
 | GET | `/api/pdf/viewer/documents/{id}/file` | The stored PDF |
 | DELETE | `/api/pdf/viewer/documents/{id}` | Delete it now |
+
+## Viewer Settings
+
+These routes keep the viewer's [settings](viewer/README.md#saving-settings-on-the-server) on the server. A `scope` can be an app, a team or a user. It can contain letters, numbers, hyphens and underscores, up to 64 characters.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/settings/{scope}` | The saved settings, or `{}` if there are none |
+| PUT | `/api/settings/{scope}` | Replace them with a flat JSON object, up to 64 KB |
+| DELETE | `/api/settings/{scope}` | Delete them |
+
+Reading is open. Changing them needs `Authorization: Bearer <key>` once `Settings__WriteKey` is set, which you can do with `SETTINGS_WRITE_KEY` when using Docker Compose. With no key, development instances accept changes and every other environment refuses them. The API checks who may change settings, not whose they are, so to give each user their own scope, enforce that at your gateway.
+
+Settings are stored as files in `Settings__Path`, which Docker Compose keeps in the `viewer-settings` volume.
 
 ## MCP Server
 

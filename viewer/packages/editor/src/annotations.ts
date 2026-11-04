@@ -2,6 +2,7 @@ import type { PageSize, ViewerContext } from '@pdf-suite/viewer';
 import type { Annotation, AnnotationTool, Point, Rect } from './annotation-types';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const DOUBLE_CLICK_MS = 400;
 const DEFAULT_COLORS: Record<string, string> = { highlight: '#ffd400', ink: '#c62828', rect: '#c62828', text: '#1c2230', note: '#f5a623', stamp: '#000000' };
 const INK_WIDTH = 2;
 const TEXT_SIZE = 14;
@@ -35,6 +36,7 @@ export const ANNOTATION_CSS = `
 .pv-annotations[data-tool='select'] { cursor: default; }
 .pv-annotations [data-annotation] { pointer-events: auto; }
 .pv-annotations:not([data-tool='select']) [data-annotation] { pointer-events: none; }
+.pv-annotations:not([data-tool]) [data-kind='note'], .pv-annotations[data-tool='note'] [data-kind='note'] { pointer-events: auto; cursor: pointer; }
 .pv-annotations [data-selected='true'] { filter: drop-shadow(0 0 2px #2f5fd0) drop-shadow(0 0 2px #2f5fd0); }
 .pv-text-editor { position: absolute; z-index: 4; min-width: 120px; padding: 1px 2px; border: 1px dashed var(--pv-accent); background: rgba(255, 255, 255, 0.9); color: #111; font-family: Helvetica, Arial, sans-serif; line-height: 1.2; resize: both; pointer-events: auto; }
 .pv-color { width: 28px; height: 28px; padding: 2px; border: 1px solid var(--pv-border); border-radius: 5px; background: transparent; cursor: pointer; }
@@ -54,6 +56,10 @@ export class AnnotationController {
   private layers = new Map<number, PageLayer>();
   private buttons = new Map<Exclude<AnnotationTool, null>, HTMLButtonElement>();
   private tool: AnnotationTool = null;
+  /** Closes the open text box and saves it, while one is open. */
+  private finishTextEdit: (() => void) | null = null;
+  private editingId: string | null = null;
+  private lastPress: { id: string; time: number } | null = null;
   private selectedId: string | null = null;
   private color: string | null = null;
   private nextId = 1;
@@ -167,6 +173,7 @@ export class AnnotationController {
   // ── Tools ──────────────────────────────────────────────────────────
 
   private applyTool(tool: AnnotationTool): void {
+    this.finishTextEdit?.();
     this.tool = tool;
     this.selectedId = null;
     for (const [name, button] of this.buttons) button.setAttribute('aria-pressed', String(name === tool));
@@ -286,12 +293,24 @@ export class AnnotationController {
   }
 
   private handlePointerDown(event: PointerEvent, pageNumber: number): void {
-    if (event.button !== 0 || !this.tool) return;
+    if (event.button !== 0) return;
+    const note = this.tool === null || this.tool === 'note' ? this.noteAt(event) : undefined;
+    if (!note && !this.tool && !this.finishTextEdit) return;
     const layer = this.layers.get(pageNumber)!;
     event.preventDefault();
     // On images, this stops the viewer underneath dragging the picture while a tool is in use.
     event.stopPropagation();
+
+    // A click away from an open text box only closes it, rather than starting another one.
+    if (this.finishTextEdit) {
+      this.finishTextEdit();
+      return;
+    }
     const start = this.toPagePoint(event, layer.svg);
+    if (note) {
+      void this.editNote(note.page, start, note);
+      return;
+    }
 
     switch (this.tool) {
       case 'select':
@@ -314,6 +333,17 @@ export class AnnotationController {
         this.placeStamp(pageNumber, start);
         break;
     }
+  }
+
+  private noteAt(event: PointerEvent): Extract<Annotation, { kind: 'note' }> | undefined {
+    const id = (event.target as Element).closest?.('[data-kind="note"]')?.getAttribute('data-annotation');
+    const annotation = this.annotations.find((item) => item.id === id);
+    return annotation?.kind === 'note' ? annotation : undefined;
+  }
+
+  private editAnnotation(annotation: Annotation): void {
+    if (annotation.kind === 'note') void this.editNote(annotation.page, annotation, annotation);
+    else if (annotation.kind === 'text') this.editText(this.layers.get(annotation.page)!, annotation.page, annotation, annotation);
   }
 
   private trackPointer(event: PointerEvent, svg: SVGSVGElement, onMove: (point: Point) => void, onEnd: (point: Point) => void): void {
@@ -412,13 +442,14 @@ export class AnnotationController {
     this.commit(() => this.annotations.push(annotation));
   }
 
-  private editText(layer: PageLayer, pageNumber: number, start: Point): void {
+  private editText(layer: PageLayer, pageNumber: number, start: Point, existing?: Extract<Annotation, { kind: 'text' }>): void {
     const editor = document.createElement('textarea');
     editor.className = 'pv-text-editor';
     editor.style.left = `${start.x}px`;
     editor.style.top = `${start.y}px`;
-    editor.style.fontSize = `${TEXT_SIZE}px`;
-    editor.style.color = this.colorFor('text');
+    editor.style.fontSize = `${existing?.fontSize ?? TEXT_SIZE}px`;
+    editor.style.color = existing?.color ?? this.colorFor('text');
+    editor.value = existing?.text ?? '';
     editor.setAttribute('aria-label', 'Annotation text');
     layer.host.append(editor);
     setTimeout(() => editor.focus());
@@ -427,12 +458,33 @@ export class AnnotationController {
     const finish = (save: boolean) => {
       if (finished) return;
       finished = true;
+      this.finishTextEdit = null;
+      this.editingId = null;
       const text = editor.value.trim();
       editor.remove();
+      if (existing) {
+        if (save && text !== existing.text) {
+          this.commit(() => {
+            this.annotations = text
+              ? this.annotations.map((annotation) => (annotation.id === existing.id ? { ...existing, text } : annotation))
+              : this.annotations.filter((annotation) => annotation.id !== existing.id);
+          });
+        } else {
+          this.renderAll();
+        }
+        return;
+      }
       if (!save || !text) return;
       const annotation: Annotation = { id: this.createId(), kind: 'text', page: pageNumber, color: this.colorFor('text'), x: start.x, y: start.y, text, fontSize: TEXT_SIZE };
       this.commit(() => this.annotations.push(annotation));
+      this.applyTool(null);
     };
+    this.finishTextEdit = () => finish(true);
+    if (existing) {
+      // The box replaces the text while it's being edited.
+      this.editingId = existing.id;
+      this.renderAll();
+    }
     editor.addEventListener('blur', () => finish(true));
     editor.addEventListener('keydown', (event) => {
       event.stopPropagation();
@@ -456,11 +508,13 @@ export class AnnotationController {
     } else if (text) {
       const annotation: Annotation = { id: this.createId(), kind: 'note', page: pageNumber, color: this.colorFor('note'), x: start.x, y: start.y, text };
       this.commit(() => this.annotations.push(annotation));
+      this.applyTool(null);
     }
   }
 
   private askForText(title: string, initial: string): Promise<string | null> {
     return new Promise((resolve) => {
+      const previousFocus = this.context.root.activeElement as HTMLElement | null;
       const form = document.createElement('form');
       form.className = 'pv-dialog';
       form.setAttribute('role', 'dialog');
@@ -486,6 +540,8 @@ export class AnnotationController {
       form.append(heading, input, actions);
       const done = (value: string | null) => {
         form.remove();
+        // Keeps focus in the viewer, so its keyboard shortcuts keep working.
+        (previousFocus?.isConnected ? previousFocus : this.buttons.get('note'))?.focus();
         resolve(value);
       };
       cancel.addEventListener('click', () => done(null));
@@ -524,11 +580,14 @@ export class AnnotationController {
 
     const id = target.getAttribute('data-annotation')!;
     const annotation = this.annotations.find((item) => item.id === id)!;
+    // Selecting redraws the annotation, so the browser doesn't see two clicks on one element and never sends dblclick.
+    const isDoubleClick = this.lastPress?.id === id && event.timeStamp - this.lastPress.time < DOUBLE_CLICK_MS;
+    this.lastPress = isDoubleClick ? null : { id, time: event.timeStamp };
     this.selectedId = id;
     this.context.root.querySelector<HTMLElement>('.pv-scroll')?.focus();
     this.renderAll();
-    if (event.detail >= 2 && annotation.kind === 'note') {
-      void this.editNote(annotation.page, start, annotation);
+    if (isDoubleClick && (annotation.kind === 'note' || annotation.kind === 'text')) {
+      this.editAnnotation(annotation);
       return;
     }
 
@@ -556,7 +615,7 @@ export class AnnotationController {
   private renderPage(pageNumber: number): void {
     const layer = this.layers.get(pageNumber);
     if (!layer) return;
-    layer.svg.replaceChildren(...this.annotations.filter((annotation) => annotation.page === pageNumber).map((annotation) => this.toSvg(annotation)));
+    layer.svg.replaceChildren(...this.annotations.filter((annotation) => annotation.page === pageNumber && annotation.id !== this.editingId).map((annotation) => this.toSvg(annotation)));
   }
 
   private toSvg(annotation: Annotation): SVGElement {

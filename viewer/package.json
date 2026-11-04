@@ -14,6 +14,7 @@
   "scripts": {
     "build": "npm run build -w @pdf-suite/viewer && npm run build -w @pdf-suite/editor && npm run build -w @pdf-suite/react && npm run build -w @pdf-suite/vue && npm run build -w @pdf-suite/angular",
     "build:examples": "npm run build -w example-react && npm run build -w example-vue && npm run build -w example-angular",
+    "screenshots": "node scripts/take-screenshots.mjs",
     "test": "npm run test:e2e",
     "test:e2e": "playwright test"
   },
