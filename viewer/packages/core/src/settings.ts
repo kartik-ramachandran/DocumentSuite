@@ -3,7 +3,7 @@ import type { RenderMode, ZoomValue } from './types';
 export type BarPosition = 'top' | 'bottom' | 'left' | 'right';
 
 /** Everything about how the viewer behaves. Set app-wide with configureViewer, or per component with the settings option. */
-export interface PdfSuiteSettings {
+export interface DocumentSuiteSettings {
   // File list
   /** What a single click on a file does. */
   clickAction: 'open' | 'menu' | 'none';
@@ -59,7 +59,7 @@ export interface PdfSuiteSettings {
   watermarkOpacity: number;
 }
 
-export const DEFAULT_SETTINGS: Readonly<PdfSuiteSettings> = Object.freeze({
+export const DEFAULT_SETTINGS: Readonly<DocumentSuiteSettings> = Object.freeze({
   clickAction: 'open',
   doubleClickAction: 'none',
   contextMenu: true,
@@ -96,7 +96,7 @@ export const DEFAULT_SETTINGS: Readonly<PdfSuiteSettings> = Object.freeze({
   watermarkOpacity: 0.2,
 });
 
-let appSettings: Partial<PdfSuiteSettings> = {};
+let appSettings: Partial<DocumentSuiteSettings> = {};
 const listeners = new Set<() => void>();
 
 function withoutUndefined<T extends object>(values: T | undefined): Partial<T> {
@@ -104,7 +104,7 @@ function withoutUndefined<T extends object>(values: T | undefined): Partial<T> {
 }
 
 /** Changes settings for the whole app. Anything not mentioned keeps its current value. */
-export function configureViewer(settings: Partial<PdfSuiteSettings>): void {
+export function configureViewer(settings: Partial<DocumentSuiteSettings>): void {
   appSettings = { ...appSettings, ...withoutUndefined(settings) };
   listeners.forEach((listener) => listener());
 }
@@ -116,14 +116,14 @@ export function resetViewerSettings(): void {
 }
 
 /** The app-wide settings currently in effect. */
-export function getViewerSettings(): PdfSuiteSettings {
+export function getViewerSettings(): DocumentSuiteSettings {
   return { ...DEFAULT_SETTINGS, ...appSettings };
 }
 
 /** Only the settings that differ from the defaults. This is what gets saved, so that a later change to a default still applies. */
-export function getChangedSettings(): Partial<PdfSuiteSettings> {
+export function getChangedSettings(): Partial<DocumentSuiteSettings> {
   const settings = getViewerSettings();
-  return Object.fromEntries(Object.entries(settings).filter(([key, value]) => value !== DEFAULT_SETTINGS[key as keyof PdfSuiteSettings])) as Partial<PdfSuiteSettings>;
+  return Object.fromEntries(Object.entries(settings).filter(([key, value]) => value !== DEFAULT_SETTINGS[key as keyof DocumentSuiteSettings])) as Partial<DocumentSuiteSettings>;
 }
 
 /** Calls back whenever the app-wide settings change. Returns a function that stops it. */
@@ -133,7 +133,7 @@ export function onViewerSettingsChange(listener: () => void): () => void {
 }
 
 /** The settings for one component: its own values win over app-wide ones, which win over the defaults. */
-export function resolveSettings(...overrides: Array<Partial<PdfSuiteSettings> | undefined>): PdfSuiteSettings {
+export function resolveSettings(...overrides: Array<Partial<DocumentSuiteSettings> | undefined>): DocumentSuiteSettings {
   return Object.assign({ ...DEFAULT_SETTINGS, ...appSettings }, ...overrides.map((values) => withoutUndefined(values)));
 }
 
@@ -143,14 +143,14 @@ export interface SettingOption {
 }
 
 export interface SettingDefinition {
-  key: keyof PdfSuiteSettings;
+  key: keyof DocumentSuiteSettings;
   label: string;
   /** A list of choices. Without this or text, the setting is an on/off switch. */
   options?: SettingOption[];
   /** The setting is typed into a text area, and can have several lines. */
   text?: boolean;
   /** This setting only matters while the named on/off setting is on. */
-  enabledBy?: keyof PdfSuiteSettings;
+  enabledBy?: keyof DocumentSuiteSettings;
 }
 
 export interface SettingGroup {
@@ -239,7 +239,7 @@ export const SETTINGS_SCHEMA: readonly SettingGroup[] = [
 ];
 
 /** Keeps only known settings with sensible values, for settings that come from storage or a server. */
-export function sanitizeSettings(values: unknown): Partial<PdfSuiteSettings> {
+export function sanitizeSettings(values: unknown): Partial<DocumentSuiteSettings> {
   if (!values || typeof values !== 'object' || Array.isArray(values)) return {};
   const result: Record<string, unknown> = {};
   for (const setting of SETTINGS_SCHEMA.flatMap((group) => group.settings)) {
@@ -252,5 +252,5 @@ export function sanitizeSettings(values: unknown): Partial<PdfSuiteSettings> {
         : typeof value === 'boolean';
     if (isValid) result[setting.key] = value;
   }
-  return result as Partial<PdfSuiteSettings>;
+  return result as Partial<DocumentSuiteSettings>;
 }

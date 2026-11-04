@@ -1,9 +1,9 @@
 import { afterNextRender, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, inject, Input, NgZone, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
-import { createFileList, createSettingsPanel, openViewerModal, type SettingsPanel, type SettingsPanelOptions, type DocumentSource, type FileItem, type FileList, type FileListOptions, type ViewerModal, type ViewerModalOptions } from '@pdf-suite/viewer';
+import { createFileList, createSettingsPanel, openViewerModal, type SettingsPanel, type SettingsPanelOptions, type DocumentSource, type FileItem, type FileList, type FileListOptions, type ViewerModal, type ViewerModalOptions } from '@document-suite/viewer';
 
 /** The viewer in a movable, resizable modal. Its `modal` property gives access to the modal and its viewer. */
 @Component({
-  selector: 'pdf-suite-viewer-modal',
+  selector: 'document-suite-viewer-modal',
   standalone: true,
   template: '',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,7 +67,7 @@ export class PdfViewerModalComponent implements OnChanges, OnDestroy {
 
 /** A list of files. Click to open one in the viewer modal, or right-click for its menu. */
 @Component({
-  selector: 'pdf-suite-file-list',
+  selector: 'document-suite-file-list',
   standalone: true,
   template: '',
   styles: ':host { display: block; }',
@@ -103,7 +103,7 @@ export class FileListComponent implements OnChanges, OnDestroy {
 
 /** A ready-made settings screen. Changes apply straight away. */
 @Component({
-  selector: 'pdf-suite-settings-panel',
+  selector: 'document-suite-settings-panel',
   standalone: true,
   template: '',
   styles: ':host { display: block; }',

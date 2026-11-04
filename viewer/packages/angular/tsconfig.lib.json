@@ -10,7 +10,7 @@
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
     "paths": {
-      "@pdf-suite/viewer": ["../core/dist/index.d.ts"]
+      "@document-suite/viewer": ["../core/dist/index.d.ts"]
     }
   },
   "angularCompilerOptions": {

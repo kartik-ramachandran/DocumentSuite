@@ -1,6 +1,6 @@
 {
-  "name": "@pdf-suite/angular",
-  "version": "0.1.0",
+  "name": "@document-suite/angular",
+  "version": "0.2.0",
   "description": "Angular component for the Document Suite viewer.",
   "license": "MIT",
   "scripts": {
@@ -9,7 +9,7 @@
   "peerDependencies": {
     "@angular/common": ">=19",
     "@angular/core": ">=19",
-    "@pdf-suite/viewer": "^0.1.0"
+    "@document-suite/viewer": "^0.2.0"
   },
   "dependencies": {
     "tslib": "^2.8.0"
@@ -24,10 +24,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kartik-ramachandran/PDFSuite.git",
+    "url": "git+https://github.com/kartik-ramachandran/DocumentSuite.git",
     "directory": "viewer/packages/angular"
   },
-  "homepage": "https://github.com/kartik-ramachandran/PDFSuite/tree/main/viewer#readme",
+  "homepage": "https://github.com/kartik-ramachandran/DocumentSuite/tree/main/viewer#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -38,6 +38,6 @@
     "annotations"
   ],
   "bugs": {
-    "url": "https://github.com/kartik-ramachandran/PDFSuite/issues"
+    "url": "https://github.com/kartik-ramachandran/DocumentSuite/issues"
   }
 }

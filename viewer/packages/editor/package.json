@@ -1,7 +1,7 @@
 {
-  "name": "@pdf-suite/editor",
-  "version": "0.1.0",
-  "description": "Optional annotations, form filling and document tools for @pdf-suite/viewer.",
+  "name": "@document-suite/editor",
+  "version": "0.2.0",
+  "description": "Optional annotations, form filling and document tools for @document-suite/viewer.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -24,17 +24,17 @@
     "build": "vite build && tsc -p tsconfig.json"
   },
   "peerDependencies": {
-    "@pdf-suite/viewer": "^0.1.0"
+    "@document-suite/viewer": "^0.2.0"
   },
   "dependencies": {
     "pdf-lib": "1.17.1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kartik-ramachandran/PDFSuite.git",
+    "url": "git+https://github.com/kartik-ramachandran/DocumentSuite.git",
     "directory": "viewer/packages/editor"
   },
-  "homepage": "https://github.com/kartik-ramachandran/PDFSuite/tree/main/viewer#readme",
+  "homepage": "https://github.com/kartik-ramachandran/DocumentSuite/tree/main/viewer#readme",
   "keywords": [
     "pdf",
     "pdf-editor",
@@ -44,6 +44,6 @@
     "signature"
   ],
   "bugs": {
-    "url": "https://github.com/kartik-ramachandran/PDFSuite/issues"
+    "url": "https://github.com/kartik-ramachandran/DocumentSuite/issues"
   }
 }

@@ -1,5 +1,5 @@
 import { ServiceClient } from './service';
-import { configureViewer, getChangedSettings, getViewerSettings, sanitizeSettings, type PdfSuiteSettings } from './settings';
+import { configureViewer, getChangedSettings, getViewerSettings, sanitizeSettings, type DocumentSuiteSettings } from './settings';
 
 export interface SettingsStoreOptions {
   /** Base URL of the PDF API. */
@@ -15,20 +15,20 @@ function settingsPath(options: SettingsStoreOptions): string {
 }
 
 /** Reads the settings saved on the server, without applying them. */
-export async function readViewerSettings(options: SettingsStoreOptions): Promise<Partial<PdfSuiteSettings>> {
+export async function readViewerSettings(options: SettingsStoreOptions): Promise<Partial<DocumentSuiteSettings>> {
   const client = new ServiceClient(options.serviceUrl, options.serviceHeaders);
   const response = await client.request(settingsPath(options));
   return sanitizeSettings(await response.json());
 }
 
 /** Applies the settings saved on the server. Call it when your app starts, so they apply before the first file opens. */
-export async function loadViewerSettings(options: SettingsStoreOptions): Promise<PdfSuiteSettings> {
+export async function loadViewerSettings(options: SettingsStoreOptions): Promise<DocumentSuiteSettings> {
   configureViewer(await readViewerSettings(options));
   return getViewerSettings();
 }
 
 /** Saves settings to the server. By default, saves everything that differs from the defaults. */
-export async function saveViewerSettings(options: SettingsStoreOptions, settings: Partial<PdfSuiteSettings> = getChangedSettings()): Promise<void> {
+export async function saveViewerSettings(options: SettingsStoreOptions, settings: Partial<DocumentSuiteSettings> = getChangedSettings()): Promise<void> {
   const client = new ServiceClient(options.serviceUrl, options.serviceHeaders);
   await client.request(settingsPath(options), {
     method: 'PUT',

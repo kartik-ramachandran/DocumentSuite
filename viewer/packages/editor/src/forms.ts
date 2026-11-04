@@ -1,4 +1,4 @@
-import type { ViewerContext } from '@pdf-suite/viewer';
+import type { ViewerContext } from '@document-suite/viewer';
 
 export const FORMS_CSS = `
 .pv-form-layer { position: absolute; inset: 0; pointer-events: none; }

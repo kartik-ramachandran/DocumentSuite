@@ -1,6 +1,6 @@
 {
-  "name": "@pdf-suite/viewer",
-  "version": "0.1.0",
+  "name": "@document-suite/viewer",
+  "version": "0.2.0",
   "description": "A framework-independent PDF viewer for the browser, with optional server rendering.",
   "license": "MIT",
   "type": "module",
@@ -26,10 +26,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kartik-ramachandran/PDFSuite.git",
+    "url": "git+https://github.com/kartik-ramachandran/DocumentSuite.git",
     "directory": "viewer/packages/core"
   },
-  "homepage": "https://github.com/kartik-ramachandran/PDFSuite/tree/main/viewer#readme",
+  "homepage": "https://github.com/kartik-ramachandran/DocumentSuite/tree/main/viewer#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -43,6 +43,6 @@
     "document-viewer"
   ],
   "bugs": {
-    "url": "https://github.com/kartik-ramachandran/PDFSuite/issues"
+    "url": "https://github.com/kartik-ramachandran/DocumentSuite/issues"
   }
 }

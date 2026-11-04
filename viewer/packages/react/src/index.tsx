@@ -1,4 +1,4 @@
-import { createViewer, type DocumentSource, type PdfViewer as ViewerInstance, type ViewerEvents, type ViewerOptions } from '@pdf-suite/viewer';
+import { createViewer, type DocumentSource, type PdfViewer as ViewerInstance, type ViewerEvents, type ViewerOptions } from '@document-suite/viewer';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type CSSProperties } from 'react';
 
 export interface PdfViewerProps extends Omit<ViewerOptions, 'source'> {
@@ -57,8 +57,8 @@ export const PdfViewer = forwardRef<ViewerInstance | null, PdfViewerProps>(funct
 
 export { FileList, PdfViewerModal, SettingsPanel } from './modal';
 export type { FileListProps, PdfViewerModalProps, SettingsPanelProps } from './modal';
-export { configureViewer, DEFAULT_SETTINGS, getViewerSettings, loadViewerSettings, resetViewerSettings, saveViewerSettings, SETTINGS_SCHEMA } from '@pdf-suite/viewer';
-export type { PdfSuiteSettings, SettingsPanelOptions, SettingsStoreOptions } from '@pdf-suite/viewer';
-export { openContextMenu, openViewerModal } from '@pdf-suite/viewer';
-export type { ContextMenuItem, FileItem, FileListOptions, FileMenuItem, ViewerModal, ViewerModalOptions } from '@pdf-suite/viewer';
-export type { DocumentSource, PdfViewer as PdfViewerInstance, ViewerEvents, ViewerOptions, ZoomValue } from '@pdf-suite/viewer';
+export { configureViewer, DEFAULT_SETTINGS, getViewerSettings, loadViewerSettings, resetViewerSettings, saveViewerSettings, SETTINGS_SCHEMA } from '@document-suite/viewer';
+export type { DocumentSuiteSettings, SettingsPanelOptions, SettingsStoreOptions } from '@document-suite/viewer';
+export { openContextMenu, openViewerModal } from '@document-suite/viewer';
+export type { ContextMenuItem, FileItem, FileListOptions, FileMenuItem, ViewerModal, ViewerModalOptions } from '@document-suite/viewer';
+export type { DocumentSource, PdfViewer as PdfViewerInstance, ViewerEvents, ViewerOptions, ZoomValue } from '@document-suite/viewer';

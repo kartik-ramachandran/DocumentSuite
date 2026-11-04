@@ -1,4 +1,4 @@
-import { createFileList, createSettingsPanel, openViewerModal, type SettingsPanel as SettingsPanelInstance, type SettingsPanelOptions, type DocumentSource, type FileItem, type FileList as FileListInstance, type FileListOptions, type ViewerModal, type ViewerModalOptions } from '@pdf-suite/viewer';
+import { createFileList, createSettingsPanel, openViewerModal, type SettingsPanel as SettingsPanelInstance, type SettingsPanelOptions, type DocumentSource, type FileItem, type FileList as FileListInstance, type FileListOptions, type ViewerModal, type ViewerModalOptions } from '@document-suite/viewer';
 import { defineComponent, h, onBeforeUnmount, onMounted, shallowRef, watch, type PropType } from 'vue';
 
 /** The viewer in a movable, resizable modal. A template ref's `modal` gives access to the modal and its viewer. */

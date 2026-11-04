@@ -1,4 +1,4 @@
-import { configureViewer, getChangedSettings, getViewerSettings, onViewerSettingsChange, resetViewerSettings, sanitizeSettings, SETTINGS_SCHEMA, type PdfSuiteSettings, type SettingDefinition } from './settings';
+import { configureViewer, getChangedSettings, getViewerSettings, onViewerSettingsChange, resetViewerSettings, sanitizeSettings, SETTINGS_SCHEMA, type DocumentSuiteSettings, type SettingDefinition } from './settings';
 import { readViewerSettings, saveViewerSettings } from './settings-store';
 
 const SAVE_DELAY_MS = 400;
@@ -14,9 +14,9 @@ export interface SettingsPanelOptions {
   /** Remembers choices in this browser under this key. Leave it out if your app stores settings itself. */
   storageKey?: string;
   /** Hides settings your users shouldn't change. */
-  exclude?: Array<keyof PdfSuiteSettings>;
+  exclude?: Array<keyof DocumentSuiteSettings>;
   /** Called with all the settings after every change, so your app can save them. */
-  onChange?: (settings: PdfSuiteSettings) => void;
+  onChange?: (settings: DocumentSuiteSettings) => void;
 }
 
 const CHEVRON = (color: string) => `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%23${color}' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
@@ -94,7 +94,7 @@ button:active { background: var(--ps-hover); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 `;
 
-function readStored(key: string | undefined): Partial<PdfSuiteSettings> {
+function readStored(key: string | undefined): Partial<DocumentSuiteSettings> {
   if (!key) return {};
   try {
     return sanitizeSettings(JSON.parse(localStorage.getItem(key) ?? '{}'));
@@ -106,8 +106,8 @@ function readStored(key: string | undefined): Partial<PdfSuiteSettings> {
 /** A ready-made settings screen. Changes apply straight away, to everything that opens afterwards. */
 export class SettingsPanel {
   private readonly shadow: ShadowRoot;
-  private readonly controls = new Map<keyof PdfSuiteSettings, HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>();
-  private readonly labels = new Map<keyof PdfSuiteSettings, HTMLLabelElement>();
+  private readonly controls = new Map<keyof DocumentSuiteSettings, HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>();
+  private readonly labels = new Map<keyof DocumentSuiteSettings, HTMLLabelElement>();
   private readonly status = document.createElement('span');
   private readonly unsubscribe: () => void;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -241,7 +241,7 @@ export class SettingsPanel {
     return label;
   }
 
-  private apply(change: Partial<PdfSuiteSettings>): void {
+  private apply(change: Partial<DocumentSuiteSettings>): void {
     configureViewer(change);
     this.afterChange();
   }

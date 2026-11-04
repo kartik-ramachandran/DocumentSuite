@@ -1,4 +1,4 @@
-import type { PageSize, ViewerContext } from '@pdf-suite/viewer';
+import type { PageSize, ViewerContext } from '@document-suite/viewer';
 import type { Annotation, AnnotationTool, Point, Rect } from './annotation-types';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';

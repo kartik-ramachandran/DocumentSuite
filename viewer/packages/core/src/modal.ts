@@ -1,5 +1,5 @@
 import { ICONS } from './icons';
-import { resolveSettings, type PdfSuiteSettings } from './settings';
+import { resolveSettings, type DocumentSuiteSettings } from './settings';
 import type { DocumentSource, ViewerOptions } from './types';
 import { PdfViewer } from './viewer';
 
@@ -118,7 +118,7 @@ export class ViewerModal {
   private readonly dialog = document.createElement('dialog');
   private readonly titleElement = document.createElement('h2');
   private readonly maximizeButton: HTMLButtonElement;
-  private readonly settings: PdfSuiteSettings;
+  private readonly settings: DocumentSuiteSettings;
   private readonly minWidth: number;
   private readonly minHeight: number;
   private rect: ModalRect;

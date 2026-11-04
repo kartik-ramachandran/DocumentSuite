@@ -1,4 +1,4 @@
-import type { FileItem } from '@pdf-suite/viewer';
+import type { FileItem } from '@document-suite/viewer';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 const PARAGRAPH = 'The quarterly inspection covered every listed site and found the records complete.';

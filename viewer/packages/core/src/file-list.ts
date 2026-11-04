@@ -1,7 +1,7 @@
 import { openContextMenu, type ContextMenuItem } from './context-menu';
 import { openViewerModal, type ViewerModal, type ViewerModalOptions } from './modal';
 import { askFileName } from './rename-dialog';
-import { onViewerSettingsChange, resolveSettings, type PdfSuiteSettings } from './settings';
+import { onViewerSettingsChange, resolveSettings, type DocumentSuiteSettings } from './settings';
 import { loadSource } from './sources';
 import type { DocumentSource } from './types';
 
@@ -28,9 +28,9 @@ export interface FileMenuItem {
 export interface FileListOptions {
   files?: FileItem[];
   /** Settings for this list and the viewers it opens, on top of the app-wide ones from configureViewer. */
-  settings?: Partial<PdfSuiteSettings>;
+  settings?: Partial<DocumentSuiteSettings>;
   /** What a click does. Defaults to the clickAction setting. */
-  clickAction?: PdfSuiteSettings['clickAction'];
+  clickAction?: DocumentSuiteSettings['clickAction'];
   /** Extra items for the menu, after Open and Download. */
   menuItems?: FileMenuItem[];
   /** Replaces opening the modal, for apps that show files their own way. */
@@ -134,7 +134,7 @@ export class FileList {
     void this.openInModal(file);
   }
 
-  private get settings(): PdfSuiteSettings {
+  private get settings(): DocumentSuiteSettings {
     return resolveSettings(this.options.viewer?.settings, this.options.settings, {
       clickAction: this.options.clickAction,
       allowRename: this.options.allowRename ?? this.options.viewer?.allowRename,
@@ -207,7 +207,7 @@ export class FileList {
     openContextMenu(x, y, items, { label: `Actions for ${file.name}`, theme });
   }
 
-  private runAction(action: PdfSuiteSettings['clickAction'], file: FileItem, event: MouseEvent): void {
+  private runAction(action: DocumentSuiteSettings['clickAction'], file: FileItem, event: MouseEvent): void {
     if (action === 'open') this.open(file);
     else if (action === 'menu') this.showMenu(file, event.clientX, event.clientY);
   }

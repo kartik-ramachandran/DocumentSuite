@@ -10,7 +10,7 @@
     "useDefineForClassFields": false,
     "outDir": "dist/out-tsc",
     "paths": {
-      "@pdf-suite/angular": ["../../packages/angular/dist"]
+      "@document-suite/angular": ["../../packages/angular/dist"]
     }
   },
   "angularCompilerOptions": { "strictTemplates": true },

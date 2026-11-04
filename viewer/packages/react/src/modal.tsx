@@ -1,4 +1,4 @@
-import { createFileList, createSettingsPanel, openViewerModal, type SettingsPanelOptions, type DocumentSource, type FileItem, type FileList as FileListInstance, type FileListOptions, type ViewerModal, type ViewerModalOptions } from '@pdf-suite/viewer';
+import { createFileList, createSettingsPanel, openViewerModal, type SettingsPanelOptions, type DocumentSource, type FileItem, type FileList as FileListInstance, type FileListOptions, type ViewerModal, type ViewerModalOptions } from '@document-suite/viewer';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type CSSProperties } from 'react';
 
 export interface PdfViewerModalProps extends Omit<ViewerModalOptions, 'source' | 'onClose'> {

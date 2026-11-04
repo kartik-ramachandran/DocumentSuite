@@ -14,8 +14,8 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@pdf-suite/viewer": ["./packages/core/src/index.ts"],
-      "@pdf-suite/editor": ["./packages/editor/src/index.ts"]
+      "@document-suite/viewer": ["./packages/core/src/index.ts"],
+      "@document-suite/editor": ["./packages/editor/src/index.ts"]
     }
   }
 }

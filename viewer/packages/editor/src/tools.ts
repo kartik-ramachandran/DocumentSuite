@@ -1,4 +1,4 @@
-import { base64ToBytes, bytesToBase64, type ServiceResult, type ViewerContext } from '@pdf-suite/viewer';
+import { base64ToBytes, bytesToBase64, type ServiceResult, type ViewerContext } from '@document-suite/viewer';
 import type { WatermarkController } from './watermark';
 
 export const TOOLS_CSS = `

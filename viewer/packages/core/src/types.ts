@@ -1,4 +1,4 @@
-import type { PdfSuiteSettings } from './settings';
+import type { DocumentSuiteSettings } from './settings';
 import type { PdfViewer } from './viewer';
 
 /** A document to open. Base64 strings can also be data URLs. */
@@ -20,7 +20,7 @@ export type DocumentKind = 'pdf' | 'image';
 export interface ViewerOptions {
   source?: DocumentSource;
   /** Settings for this viewer, on top of the app-wide ones from configureViewer. */
-  settings?: Partial<PdfSuiteSettings>;
+  settings?: Partial<DocumentSuiteSettings>;
   /** File name used for downloads, and to detect non-PDF documents. */
   fileName?: string;
   /** client renders in the browser. server has your API render pages. Defaults to client. */
@@ -126,7 +126,7 @@ export interface ViewerContext {
   /** The raw PDF.js document in client mode, otherwise null. */
   getPdfJsDocument(): unknown;
   /** The settings in effect for this viewer. */
-  readonly settings: PdfSuiteSettings;
+  readonly settings: DocumentSuiteSettings;
   /** True when the serviceUrl option is set. */
   readonly hasService: boolean;
   /** Records that the document has changed since it was opened or last saved. */

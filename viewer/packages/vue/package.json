@@ -1,6 +1,6 @@
 {
-  "name": "@pdf-suite/vue",
-  "version": "0.1.0",
+  "name": "@document-suite/vue",
+  "version": "0.2.0",
   "description": "Vue component for the Document Suite viewer.",
   "license": "MIT",
   "type": "module",
@@ -21,7 +21,7 @@
     "build": "vite build && tsc -p tsconfig.json"
   },
   "peerDependencies": {
-    "@pdf-suite/viewer": "^0.1.0",
+    "@document-suite/viewer": "^0.2.0",
     "vue": ">=3.3"
   },
   "devDependencies": {
@@ -29,10 +29,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kartik-ramachandran/PDFSuite.git",
+    "url": "git+https://github.com/kartik-ramachandran/DocumentSuite.git",
     "directory": "viewer/packages/vue"
   },
-  "homepage": "https://github.com/kartik-ramachandran/PDFSuite/tree/main/viewer#readme",
+  "homepage": "https://github.com/kartik-ramachandran/DocumentSuite/tree/main/viewer#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -44,6 +44,6 @@
     "annotations"
   ],
   "bugs": {
-    "url": "https://github.com/kartik-ramachandran/PDFSuite/issues"
+    "url": "https://github.com/kartik-ramachandran/DocumentSuite/issues"
   }
 }

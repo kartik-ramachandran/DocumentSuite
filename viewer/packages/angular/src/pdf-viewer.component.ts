@@ -1,9 +1,9 @@
 import { afterNextRender, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, inject, Input, NgZone, OnChanges, OnDestroy, Output, SimpleChanges, ViewEncapsulation } from '@angular/core';
-import { createViewer, type DocumentSource, type PdfViewer, type ViewerEvents, type ViewerOptions } from '@pdf-suite/viewer';
+import { createViewer, type DocumentSource, type PdfViewer, type ViewerEvents, type ViewerOptions } from '@document-suite/viewer';
 
 /** The PDF viewer as a standalone Angular component. Its `viewer` property gives access to the full API. Give it a height. */
 @Component({
-  selector: 'pdf-suite-viewer',
+  selector: 'document-suite-viewer',
   standalone: true,
   template: '',
   styles: ':host { display: block; height: 100%; }',

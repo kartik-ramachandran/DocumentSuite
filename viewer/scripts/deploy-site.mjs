@@ -15,7 +15,7 @@ const remote = inRepository('remote', 'get-url', 'origin');
 const identity = ['-c', `user.name=${inRepository('config', 'user.name')}`, '-c', `user.email=${inRepository('config', 'user.email')}`];
 const source = inRepository('rev-parse', '--short', 'HEAD');
 
-const folder = mkdtempSync(join(tmpdir(), 'pdf-suite-pages-'));
+const folder = mkdtempSync(join(tmpdir(), 'document-suite-pages-'));
 const git = (...args) => execFileSync('git', args, { cwd: folder, stdio: 'inherit' });
 
 try {

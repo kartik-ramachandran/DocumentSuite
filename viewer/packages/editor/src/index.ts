@@ -1,4 +1,4 @@
-import type { ViewerContext, ViewerPlugin } from '@pdf-suite/viewer';
+import type { ViewerContext, ViewerPlugin } from '@document-suite/viewer';
 import { AnnotationController } from './annotations';
 import { FormController } from './forms';
 import { ToolsController } from './tools';

@@ -1,7 +1,7 @@
 {
-  "name": "pdf-suite-viewer-workspace",
+  "name": "document-suite-viewer-workspace",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "workspaces": [
     "packages/core",
@@ -12,7 +12,7 @@
     "examples/*"
   ],
   "scripts": {
-    "build": "npm run build -w @pdf-suite/viewer && npm run build -w @pdf-suite/editor && npm run build -w @pdf-suite/react && npm run build -w @pdf-suite/vue && npm run build -w @pdf-suite/angular",
+    "build": "npm run build -w @document-suite/viewer && npm run build -w @document-suite/editor && npm run build -w @document-suite/react && npm run build -w @document-suite/vue && npm run build -w @document-suite/angular",
     "build:examples": "npm run build -w example-react && npm run build -w example-vue && npm run build -w example-angular",
     "pack": "npm run build && node scripts/pack.mjs",
     "screenshots": "node scripts/take-screenshots.mjs",

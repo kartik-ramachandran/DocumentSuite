@@ -9,7 +9,7 @@ export default defineConfig({
     },
     target: 'es2022',
     rollupOptions: {
-      external: ['@pdf-suite/viewer'],
+      external: ['@document-suite/viewer'],
       output: {
         chunkFileNames: 'chunks/[name]-[hash].js',
       },

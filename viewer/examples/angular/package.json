@@ -1,7 +1,7 @@
 {
   "name": "example-angular",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "scripts": {
     "build": "ng build",
     "preview": "vite preview --outDir dist/example-angular/browser --port 5175 --strictPort"
@@ -11,9 +11,9 @@
     "@angular/compiler": "^22.2.0",
     "@angular/core": "^22.2.0",
     "@angular/platform-browser": "^22.2.0",
-    "@pdf-suite/angular": "*",
-    "@pdf-suite/viewer": "*",
-    "@pdf-suite/editor": "*",
+    "@document-suite/angular": "*",
+    "@document-suite/viewer": "*",
+    "@document-suite/editor": "*",
     "pdf-lib": "1.17.1",
     "rxjs": "^7.8.0",
     "tslib": "^2.8.0"

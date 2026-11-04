@@ -1,7 +1,7 @@
 import { afterNextRender, Component, signal, viewChild } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { FileListComponent, PdfViewerComponent, SettingsPanelComponent, type FileItem, type FileListOptions, type ViewerOptions } from '@pdf-suite/angular';
-import { createEditorPlugin } from '@pdf-suite/editor';
+import { FileListComponent, PdfViewerComponent, SettingsPanelComponent, type FileItem, type FileListOptions, type ViewerOptions } from '@document-suite/angular';
+import { createEditorPlugin } from '@document-suite/editor';
 import { applyDemoSettings, demoPanelOptions } from '../../shared/demo-settings';
 import { createSampleFiles, filesFromInput } from '../../shared/sample-files';
 
@@ -21,7 +21,7 @@ const viewerOptions: ViewerOptions = {
 @Component({
   selector: 'app-viewer-demo',
   imports: [PdfViewerComponent],
-  template: '<pdf-suite-viewer [source]="source()" [options]="options" />',
+  template: '<document-suite-viewer [source]="source()" [options]="options" />',
 })
 class ViewerDemoComponent {
   readonly source = signal(params.get('source') ?? undefined);
@@ -45,9 +45,9 @@ class ViewerDemoComponent {
       <p><label>Add files <input type="file" multiple aria-label="Add files" (change)="addFiles($event)" /></label></p>
       <details style="margin-bottom: 16px">
         <summary style="cursor: pointer; font-weight: 600">Settings</summary>
-        <div style="margin-top: 12px"><pdf-suite-settings-panel [options]="panelOptions" /></div>
+        <div style="margin-top: 12px"><document-suite-settings-panel [options]="panelOptions" /></div>
       </details>
-      <pdf-suite-file-list [files]="files()" [options]="options" />
+      <document-suite-file-list [files]="files()" [options]="options" />
     </main>
   `,
 })

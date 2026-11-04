@@ -12,7 +12,7 @@ export { askFileName } from './rename-dialog';
 export { configureViewer, DEFAULT_SETTINGS, getChangedSettings, getViewerSettings, onViewerSettingsChange, resetViewerSettings, sanitizeSettings, SETTINGS_SCHEMA } from './settings';
 export { loadViewerSettings, readViewerSettings, saveViewerSettings } from './settings-store';
 export type { SettingsStoreOptions } from './settings-store';
-export type { BarPosition, PdfSuiteSettings, SettingDefinition, SettingGroup, SettingOption } from './settings';
+export type { BarPosition, DocumentSuiteSettings, SettingDefinition, SettingGroup, SettingOption } from './settings';
 export { createSettingsPanel, SettingsPanel } from './settings-panel';
 export type { SettingsPanelOptions } from './settings-panel';
 export type { ContextMenuHandle, ContextMenuItem } from './context-menu';

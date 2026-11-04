@@ -1,7 +1,7 @@
 import { ICONS } from './icons';
 import { askFileName } from './rename-dialog';
 import { ServiceClient } from './service';
-import { resolveSettings, type PdfSuiteSettings } from './settings';
+import { resolveSettings, type DocumentSuiteSettings } from './settings';
 import type { ImageView } from './image-view';
 import { bytesToBase64, detectImage, isPdf, loadSource, nameForType, type LoadedSource } from './sources';
 import { VIEWER_CSS } from './styles';
@@ -59,7 +59,7 @@ type Listener<K extends keyof ViewerEvents> = (event: ViewerEvents[K]) => void;
 /** The viewer. Attach it to any element with createViewer, or use the framework wrappers. */
 export class PdfViewer {
   /** The settings in effect. They're read when the viewer is created. */
-  readonly settings: PdfSuiteSettings;
+  readonly settings: DocumentSuiteSettings;
   private readonly shadow: ShadowRoot;
   private readonly listeners = new Map<keyof ViewerEvents, Set<Listener<never>>>();
   private readonly service: ServiceClient;

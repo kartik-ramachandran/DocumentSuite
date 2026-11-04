@@ -1,5 +1,5 @@
-import { FileList, PdfViewer, SettingsPanel, type FileItem, type PdfViewerInstance, type ViewerOptions } from '@pdf-suite/react';
-import { createEditorPlugin } from '@pdf-suite/editor';
+import { FileList, PdfViewer, SettingsPanel, type FileItem, type PdfViewerInstance, type ViewerOptions } from '@document-suite/react';
+import { createEditorPlugin } from '@document-suite/editor';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { applyDemoSettings, demoPanelOptions } from '../../shared/demo-settings';

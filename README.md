@@ -1,12 +1,12 @@
 # Document Suite
 
-[![MIT License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Latest release](https://img.shields.io/github/v/release/kartik-ramachandran/PDFSuite)](https://github.com/kartik-ramachandran/PDFSuite/releases/latest) [![Live demo](https://img.shields.io/badge/demo-try_it_live-a83f22)](https://kartik-ramachandran.github.io/PDFSuite/#try)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Latest release](https://img.shields.io/github/v/release/kartik-ramachandran/DocumentSuite)](https://github.com/kartik-ramachandran/DocumentSuite/releases/latest) [![Live demo](https://img.shields.io/badge/demo-try_it_live-a83f22)](https://kartik-ramachandran.github.io/DocumentSuite/#try)
 
 Open-source PDF tools you run yourself: a REST API, an MCP server for AI clients, and a viewer and editor you can embed in React, Vue, Angular or plain JavaScript apps.
 
 Everything runs on your own infrastructure, so documents stay with you. The one exception is the optional AI review, which is off by default and sends documents to the Azure OpenAI service you configure.
 
-**[Try the viewer live](https://kartik-ramachandran.github.io/PDFSuite/#try)**, with nothing to install · **[Add it to your app](viewer/README.md#add-it-to-your-app)** · **[Website](https://kartik-ramachandran.github.io/PDFSuite/)** · **[Get setup help](https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml)**
+**[Try the viewer live](https://kartik-ramachandran.github.io/DocumentSuite/#try)**, with nothing to install · **[Add it to your app](viewer/README.md#add-it-to-your-app)** · **[Website](https://kartik-ramachandran.github.io/DocumentSuite/)** · **[Get setup help](https://github.com/kartik-ramachandran/DocumentSuite/issues/new?template=setup-help.yml)**
 
 ![A file opening from a list, being annotated, and the settings moving the toolbar](docs/screenshots/demo.gif)
 
@@ -59,8 +59,8 @@ The [MCP server](#mcp-server) gives AI clients six tools for working with docume
 You need Docker.
 
 ```bash
-git clone https://github.com/kartik-ramachandran/PDFSuite.git
-cd PDFSuite
+git clone https://github.com/kartik-ramachandran/DocumentSuite.git
+cd DocumentSuite
 docker compose up -d --build
 ```
 
@@ -86,11 +86,11 @@ Then open http://localhost:5173. The list has sample files to click on, and **Se
 
 ## Need help setting it up?
 
-Document Suite is free and open for anyone to use, and there's nothing to buy. If you'd like a hand getting it running, **[ask for setup help](https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
+Document Suite is free and open for anyone to use, and there's nothing to buy. If you'd like a hand getting it running, **[ask for setup help](https://github.com/kartik-ramachandran/DocumentSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
 
 ## Project status
 
-This is an early release, at version 0.1.0.
+This is an early release, at version 0.2.0.
 
 - **The viewer packages aren't on npm yet.** They [install from the GitHub release](viewer/README.md#1-install-the-packages) for now
 - **The API needs protecting.** Put it behind your own gateway for login and rate limits

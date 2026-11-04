@@ -2,7 +2,7 @@
 
 An open-source PDF and image viewer and editor for React, Vue, Angular and plain JavaScript.
 
-**[Try it live](https://kartik-ramachandran.github.io/PDFSuite/#try)** · **[Add it to your app](#add-it-to-your-app)** · **[All settings](#settings)**
+**[Try it live](https://kartik-ramachandran.github.io/DocumentSuite/#try)** · **[Add it to your app](#add-it-to-your-app)** · **[All settings](#settings)**
 
 - **In your app:** a file list with a right-click menu, and a window people can move and resize
 - **Viewing:** zoom, thumbnails, search, selectable text, rotation, printing and download
@@ -30,28 +30,28 @@ All of these use generated sample files. To retake them, follow the steps at the
 
 This takes a few minutes, and PDFs and images work straight away with no server. These exact steps are tested in new React, Vue, Angular and plain JavaScript apps.
 
-**[Try the viewer live](https://kartik-ramachandran.github.io/PDFSuite/#try) first**, with nothing to install.
+**[Try the viewer live](https://kartik-ramachandran.github.io/DocumentSuite/#try) first**, with nothing to install.
 
 ### 1. Install the packages
 
 You always need `viewer`, then add `editor` for annotations and forms, and the package for your framework.
 
-The packages aren't on npm yet, so they install from the [GitHub release](https://github.com/kartik-ramachandran/PDFSuite/releases/latest). Your `package.json` then points at those files, and everything else works as normal.
+The packages aren't on npm yet, so they install from the [GitHub release](https://github.com/kartik-ramachandran/DocumentSuite/releases/latest). Your `package.json` then points at those files, and everything else works as normal.
 
 ```bash
-RELEASE=https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0
+RELEASE=https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0
 
-# Use pdf-suite-vue or pdf-suite-angular for those frameworks. For plain JavaScript, leave off the last file.
-npm install $RELEASE/pdf-suite-viewer-0.1.0.tgz $RELEASE/pdf-suite-editor-0.1.0.tgz $RELEASE/pdf-suite-react-0.1.0.tgz
+# Use document-suite-vue or document-suite-angular for those frameworks. For plain JavaScript, leave off the last file.
+npm install $RELEASE/document-suite-viewer-0.2.0.tgz $RELEASE/document-suite-editor-0.2.0.tgz $RELEASE/document-suite-react-0.2.0.tgz
 ```
 
-In PowerShell, set it with `$RELEASE="https://..."`, and the `npm install` line works as it is. The commands on the [website](https://kartik-ramachandran.github.io/PDFSuite/#install) have the addresses written out in full, ready to copy.
+In PowerShell, set it with `$RELEASE="https://..."`, and the `npm install` line works as it is. The commands on the [website](https://kartik-ramachandran.github.io/DocumentSuite/#install) have the addresses written out in full, ready to copy.
 
 | Package | Purpose |
 |---|---|
-| `@pdf-suite/viewer` | The viewer, with no framework needed |
-| `@pdf-suite/editor` | Optional annotations, form filling, watermarks and document tools |
-| `@pdf-suite/react`, `@pdf-suite/vue`, `@pdf-suite/angular` | Framework components |
+| `@document-suite/viewer` | The viewer, with no framework needed |
+| `@document-suite/editor` | Optional annotations, form filling, watermarks and document tools |
+| `@document-suite/react`, `@document-suite/vue`, `@document-suite/angular` | Framework components |
 
 Tested with React 19, Vue 3.5 and Angular 22. There's no stylesheet to import, because the viewer brings its own styles inside a Shadow DOM, so your app's CSS and the viewer's can't affect each other.
 
@@ -62,8 +62,8 @@ Tested with React 19, Vue 3.5 and Angular 22. There's no stylesheet to import, b
 **React**
 
 ```tsx
-import { createEditorPlugin } from '@pdf-suite/editor';
-import { FileList, type FileItem } from '@pdf-suite/react';
+import { createEditorPlugin } from '@document-suite/editor';
+import { FileList, type FileItem } from '@document-suite/react';
 
 const files: FileItem[] = [
   { id: 'report', name: 'report.pdf', source: '/report.pdf' },
@@ -82,8 +82,8 @@ export function App() {
 
 ```vue
 <script setup lang="ts">
-import { createEditorPlugin } from '@pdf-suite/editor';
-import { FileList } from '@pdf-suite/vue';
+import { createEditorPlugin } from '@document-suite/editor';
+import { FileList } from '@document-suite/vue';
 import { markRaw } from 'vue';
 
 const files = [
@@ -104,13 +104,13 @@ const options = markRaw({ viewer: { plugins: [createEditorPlugin()] } });
 
 ```ts
 import { Component } from '@angular/core';
-import { createEditorPlugin } from '@pdf-suite/editor';
-import { FileListComponent, type FileItem } from '@pdf-suite/angular';
+import { createEditorPlugin } from '@document-suite/editor';
+import { FileListComponent, type FileItem } from '@document-suite/angular';
 
 @Component({
   selector: 'app-root',
   imports: [FileListComponent],
-  template: '<pdf-suite-file-list [files]="files" [options]="options" />',
+  template: '<document-suite-file-list [files]="files" [options]="options" />',
 })
 export class AppComponent {
   readonly files: FileItem[] = [
@@ -125,8 +125,8 @@ export class AppComponent {
 **Plain JavaScript**
 
 ```js
-import { createFileList } from '@pdf-suite/viewer';
-import { createEditorPlugin } from '@pdf-suite/editor';
+import { createFileList } from '@document-suite/viewer';
+import { createEditorPlugin } from '@document-suite/editor';
 
 createFileList(document.getElementById('files'), {
   files: [
@@ -161,8 +161,8 @@ const files = documents.map((document) => ({
 The API adds Word, Excel, PowerPoint, HTML, Markdown and text files, the document tools, server rendering and saved settings. Everything else works without it.
 
 ```bash
-git clone https://github.com/kartik-ramachandran/PDFSuite.git
-cd PDFSuite
+git clone https://github.com/kartik-ramachandran/DocumentSuite.git
+cd DocumentSuite
 docker compose up -d --build
 ```
 
@@ -179,8 +179,8 @@ Read [SECURITY.md](../SECURITY.md) before deploying the API, because it has no l
 The viewer gives you the finished file, including annotations and form values. Open the modal yourself to add your own save button or logic:
 
 ```ts
-import { openViewerModal } from '@pdf-suite/viewer';
-import { createEditorPlugin } from '@pdf-suite/editor';
+import { openViewerModal } from '@document-suite/viewer';
+import { createEditorPlugin } from '@document-suite/editor';
 
 const modal = openViewerModal({ title: file.name, plugins: [createEditorPlugin()] });
 await modal.load(file.url, file.name);
@@ -201,28 +201,28 @@ Everything from what a click does to where the toolbar sits is in the [settings]
 The viewer fills its parent element, so **give the parent a height**.
 
 ```tsx
-import { PdfViewer } from '@pdf-suite/react';
+import { PdfViewer } from '@document-suite/react';
 
 <div style={{ height: '100vh' }}>
   <PdfViewer source="/report.pdf" />
 </div>
 ```
 
-In Vue it's `<PdfViewer source="/report.pdf" />` too, and in Angular `<pdf-suite-viewer source="/report.pdf" />`, with `PdfViewerComponent` in your component's `imports`. In plain JavaScript, use `createViewer(element, { source: '/report.pdf' })`.
+In Vue it's `<PdfViewer source="/report.pdf" />` too, and in Angular `<document-suite-viewer source="/report.pdf" />`, with `PdfViewerComponent` in your component's `imports`. In plain JavaScript, use `createViewer(element, { source: '/report.pdf' })`.
 
 Both can also be controlled from code, which the [API section](#api) covers.
 
 ### Need a hand?
 
-Document Suite is free and open for anyone to use. If you get stuck, **[ask for setup help](https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
+Document Suite is free and open for anyone to use. If you get stuck, **[ask for setup help](https://github.com/kartik-ramachandran/DocumentSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
 
 ## Viewing files in a modal
 
 `FileList` shows your files. Clicking one opens it in a modal that can be resized from any edge or corner, moved by its title bar and maximized. Right-clicking shows a menu with **Open**, **Download** and your own actions.
 
 ```tsx
-import { FileList } from '@pdf-suite/react';
-import { createEditorPlugin } from '@pdf-suite/editor';
+import { FileList } from '@document-suite/react';
+import { createEditorPlugin } from '@document-suite/editor';
 
 const files = [
   { id: '1', name: 'Report.pdf', source: '/files/1', size: 182000, modified: '2026-10-28' },
@@ -237,14 +237,14 @@ const files = [
 />
 ```
 
-The same component is `FileList` in Vue (`:files` and `:options`), and `<pdf-suite-file-list [files] [options]>` in Angular. What a click does, and everything else about how it behaves, is in the [settings](#settings).
+The same component is `FileList` in Vue (`:files` and `:options`), and `<document-suite-file-list [files] [options]>` in Angular. What a click does, and everything else about how it behaves, is in the [settings](#settings).
 
 ### Using your own file list
 
 If your app already has a list, call the functions from its click and right-click handlers:
 
 ```ts
-import { openContextMenu, openViewerModal } from '@pdf-suite/viewer';
+import { openContextMenu, openViewerModal } from '@document-suite/viewer';
 
 function openFile(file) {
   const modal = openViewerModal({ title: file.name, serviceUrl: 'https://pdf.example.com' });
@@ -261,7 +261,7 @@ row.addEventListener('contextmenu', (event) => {
 });
 ```
 
-To control a modal from a component instead, use `PdfViewerModal` in React and Vue, or `pdf-suite-viewer-modal` in Angular, with an `open` input and a close event.
+To control a modal from a component instead, use `PdfViewerModal` in React and Vue, or `document-suite-viewer-modal` in Angular, with an `open` input and a close event.
 
 ### Modal options
 
@@ -309,7 +309,7 @@ Turn on the `allowRename` [setting](#settings) to ask for a name first, starting
 ## Adding editing tools
 
 ```ts
-import { createEditorPlugin } from '@pdf-suite/editor';
+import { createEditorPlugin } from '@document-suite/editor';
 
 const editor = createEditorPlugin();
 const viewer = createViewer(element, {
@@ -336,7 +336,7 @@ In exported PDFs, drawings, highlights, text and pictures become page content, c
 All behaviour is controlled by one set of settings. Set them for your whole app, once, when it starts:
 
 ```ts
-import { configureViewer } from '@pdf-suite/viewer'; // also exported by the React, Vue and Angular packages
+import { configureViewer } from '@document-suite/viewer'; // also exported by the React, Vue and Angular packages
 
 configureViewer({
   clickAction: 'menu',       // a single click shows the menu instead of opening the file
@@ -413,7 +413,7 @@ The toolbar's position only changes through this setting. It can't be dragged to
 />
 ```
 
-In Vue, pass these through `:options`, and in Angular use `<pdf-suite-settings-panel [options]="...">`. Saved choices load when the panel appears, so if it's on a separate page, also call `configureViewer(JSON.parse(localStorage.getItem('my-app-viewer-settings') ?? '{}'))` when your app starts. To build your own screen, `SETTINGS_SCHEMA` describes every setting.
+In Vue, pass these through `:options`, and in Angular use `<document-suite-settings-panel [options]="...">`. Saved choices load when the panel appears, so if it's on a separate page, also call `configureViewer(JSON.parse(localStorage.getItem('my-app-viewer-settings') ?? '{}'))` when your app starts. To build your own screen, `SETTINGS_SCHEMA` describes every setting.
 
 ### Saving settings on the server
 
@@ -432,14 +432,14 @@ loadViewerSettings(options: {
   serviceUrl: string;                       // the PDF API
   scope?: string;                           // defaults to "default"
   serviceHeaders?: Record<string, string>;  // such as a gateway's auth token
-}): Promise<PdfSuiteSettings>
+}): Promise<DocumentSuiteSettings>
 ```
 
 **React**
 
 ```tsx
 import { createRoot } from 'react-dom/client';
-import { loadViewerSettings } from '@pdf-suite/react';
+import { loadViewerSettings } from '@document-suite/react';
 import { App } from './App';
 
 loadViewerSettings({ serviceUrl: 'https://pdf.example.com', scope: 'team-a' })
@@ -451,7 +451,7 @@ loadViewerSettings({ serviceUrl: 'https://pdf.example.com', scope: 'team-a' })
 
 ```ts
 import { createApp } from 'vue';
-import { loadViewerSettings } from '@pdf-suite/vue';
+import { loadViewerSettings } from '@document-suite/vue';
 import App from './App.vue';
 
 loadViewerSettings({ serviceUrl: 'https://pdf.example.com', scope: 'team-a' })
@@ -463,7 +463,7 @@ loadViewerSettings({ serviceUrl: 'https://pdf.example.com', scope: 'team-a' })
 
 ```ts
 import { bootstrapApplication } from '@angular/platform-browser';
-import { loadViewerSettings } from '@pdf-suite/angular';
+import { loadViewerSettings } from '@document-suite/angular';
 import { AppComponent } from './app/app.component';
 
 loadViewerSettings({ serviceUrl: 'https://pdf.example.com', scope: 'team-a' })
@@ -471,7 +471,7 @@ loadViewerSettings({ serviceUrl: 'https://pdf.example.com', scope: 'team-a' })
   .finally(() => bootstrapApplication(AppComponent));
 ```
 
-With plain JavaScript, import it from `@pdf-suite/viewer` and do the same before creating your viewer. Every `PdfViewer`, `FileList` and modal then uses these settings, with no further code.
+With plain JavaScript, import it from `@document-suite/viewer` and do the same before creating your viewer. Every `PdfViewer`, `FileList` and modal then uses these settings, with no further code.
 
 **What to expect:**
 
@@ -490,7 +490,7 @@ await loadViewerSettings({ serviceUrl, scope: `user-${user.id}` });
 **Picking up changes while your app is open.** The server doesn't notify the browser, so changes arrive the next time you load. To refresh without a page reload, for example when someone comes back to the tab, reset first so that anything deleted on the server goes away too:
 
 ```ts
-import { loadViewerSettings, resetViewerSettings } from '@pdf-suite/viewer';
+import { loadViewerSettings, resetViewerSettings } from '@document-suite/viewer';
 
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible') return;

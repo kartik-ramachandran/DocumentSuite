@@ -916,7 +916,7 @@ test.describe('bar positions', () => {
   }
 
   test('a title bar position saved earlier is ignored', async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem('pdf-suite-demo-settings', JSON.stringify({ modalHeaderPosition: 'left', toolbarPosition: 'left' })));
+    await page.addInitScript(() => localStorage.setItem('document-suite-demo-settings', JSON.stringify({ modalHeaderPosition: 'left', toolbarPosition: 'left' })));
     await openList(page);
     await row(page, 'report').click();
     await expect(firstPage(page)).toBeVisible();

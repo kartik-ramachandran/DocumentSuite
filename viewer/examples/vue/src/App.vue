@@ -1,6 +1,6 @@
 <script setup>
-import { FileList, PdfViewer, SettingsPanel } from '@pdf-suite/vue';
-import { createEditorPlugin } from '@pdf-suite/editor';
+import { FileList, PdfViewer, SettingsPanel } from '@document-suite/vue';
+import { createEditorPlugin } from '@document-suite/editor';
 import { markRaw, onMounted, ref, shallowRef, watchEffect } from 'vue';
 import { applyDemoSettings, demoPanelOptions } from '../../shared/demo-settings';
 import { createSampleFiles, filesFromInput } from '../../shared/sample-files';
