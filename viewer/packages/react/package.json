@@ -1,7 +1,7 @@
 {
   "name": "@pdf-suite/react",
   "version": "0.1.0",
-  "description": "React component for the PDF Suite viewer.",
+  "description": "React component for the Document Suite viewer.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,4 +1,4 @@
-# PDF Suite
+# Document Suite
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Latest release](https://img.shields.io/github/v/release/kartik-ramachandran/PDFSuite)](https://github.com/kartik-ramachandran/PDFSuite/releases/latest) [![Live demo](https://img.shields.io/badge/demo-try_it_live-a83f22)](https://kartik-ramachandran.github.io/PDFSuite/#try)
 
@@ -86,7 +86,7 @@ Then open http://localhost:5173. The list has sample files to click on, and **Se
 
 ## Need help setting it up?
 
-PDF Suite is free and open for anyone to use, and there's nothing to buy. If you'd like a hand getting it running, **[ask for setup help](https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
+Document Suite is free and open for anyone to use, and there's nothing to buy. If you'd like a hand getting it running, **[ask for setup help](https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
 
 ## Project status
 

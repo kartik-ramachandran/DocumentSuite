@@ -1,4 +1,4 @@
-# PDF Suite Viewer
+# Document Suite Viewer
 
 An open-source PDF and image viewer and editor for React, Vue, Angular and plain JavaScript.
 
@@ -214,7 +214,7 @@ Both can also be controlled from code, which the [API section](#api) covers.
 
 ### Need a hand?
 
-PDF Suite is free and open for anyone to use. If you get stuck, **[ask for setup help](https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
+Document Suite is free and open for anyone to use. If you get stuck, **[ask for setup help](https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
 
 ## Viewing files in a modal
 

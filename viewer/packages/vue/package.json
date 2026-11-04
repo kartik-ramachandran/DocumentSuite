@@ -1,7 +1,7 @@
 {
   "name": "@pdf-suite/vue",
   "version": "0.1.0",
-  "description": "Vue component for the PDF Suite viewer.",
+  "description": "Vue component for the Document Suite viewer.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

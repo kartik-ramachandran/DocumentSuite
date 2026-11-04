@@ -1,7 +1,7 @@
 {
   "name": "@pdf-suite/angular",
   "version": "0.1.0",
-  "description": "Angular component for the PDF Suite viewer.",
+  "description": "Angular component for the Document Suite viewer.",
   "license": "MIT",
   "scripts": {
     "build": "ng-packagr -p ng-package.json"

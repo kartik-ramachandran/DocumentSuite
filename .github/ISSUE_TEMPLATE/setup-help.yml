@@ -1,12 +1,12 @@
 name: Ask for setup help
-description: Get a hand adding PDF Suite to your app, or running the API or MCP server.
+description: Get a hand adding Document Suite to your app, or running the API or MCP server.
 title: "Setup help: "
 labels: ["setup help"]
 body:
   - type: markdown
     attributes:
       value: |
-        PDF Suite is free and open for anyone to use, and there's nothing to buy. Tell us what you're setting up, and Kartik will get in touch here.
+        Document Suite is free and open for anyone to use, and there's nothing to buy. Tell us what you're setting up, and Kartik will get in touch here.
 
         **This page is public.** Please don't include confidential documents, passwords or API keys.
   - type: dropdown
