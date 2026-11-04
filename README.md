@@ -6,7 +6,7 @@ Open-source PDF tools you run yourself: a REST API, an MCP server for AI clients
 
 Everything runs on your own infrastructure, so documents stay with you. The one exception is the optional AI review, which is off by default and sends documents to the Azure OpenAI service you configure.
 
-**[Try the viewer live](https://kartik-ramachandran.github.io/DocumentSuite/#try)**, with nothing to install · **[Add it to your app](viewer/README.md#add-it-to-your-app)** · **[Website](https://kartik-ramachandran.github.io/DocumentSuite/)** · **[Get setup help](https://github.com/kartik-ramachandran/DocumentSuite/issues/new?template=setup-help.yml)**
+**[Try the viewer live](https://kartik-ramachandran.github.io/DocumentSuite/#try)**, with nothing to install · **[Add it to your app](viewer/README.md#add-it-to-your-app)** · **[Website](https://kartik-ramachandran.github.io/DocumentSuite/)** · **[Get setup help](mailto:kartikrama272@gmail.com?subject=Document%20Suite%20setup%20help)**
 
 ![A file opening from a list, being annotated, and the settings moving the toolbar](docs/screenshots/demo.gif)
 
@@ -86,7 +86,7 @@ Then open http://localhost:5173. The list has sample files to click on, and **Se
 
 ## Need help setting it up?
 
-Document Suite is free and open for anyone to use, and there's nothing to buy. If you'd like a hand getting it running, **[ask for setup help](https://github.com/kartik-ramachandran/DocumentSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
+Document Suite is free and open for anyone to use, and there's nothing to buy. If you'd like a hand getting it running, email Kartik at **[kartikrama272@gmail.com](mailto:kartikrama272@gmail.com?subject=Document%20Suite%20setup%20help)**.
 
 ## Project status
 

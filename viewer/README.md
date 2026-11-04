@@ -214,7 +214,7 @@ Both can also be controlled from code, which the [API section](#api) covers.
 
 ### Need a hand?
 
-Document Suite is free and open for anyone to use. If you get stuck, **[ask for setup help](https://github.com/kartik-ramachandran/DocumentSuite/issues/new?template=setup-help.yml)**, and Kartik will get in touch.
+Document Suite is free and open for anyone to use. If you get stuck, email Kartik at **[kartikrama272@gmail.com](mailto:kartikrama272@gmail.com?subject=Document%20Suite%20setup%20help)**.
 
 ## Viewing files in a modal
 

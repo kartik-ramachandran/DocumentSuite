@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Document Suite is free and open for anyone to use, and there's nothing to buy. Tell us what you're setting up, and Kartik will get in touch here.
+        Document Suite is free and open for anyone to use, and there's nothing to buy. Tell us what you're setting up, and Kartik will reply here. To keep it private, email kartikrama272@gmail.com instead.
 
         **This page is public.** Please don't include confidential documents, passwords or API keys.
   - type: dropdown
