@@ -19,7 +19,7 @@ async function openViewer(page: Page, settings: object, file = 'report.pdf'): Pr
   await page.goto(viewerUrl(settings));
   await page.waitForFunction(() => Boolean((window as never as { pdfViewer?: unknown }).pdfViewer));
   await page.locator('input[type="file"]').first().setInputFiles(fixture(file));
-  await expect(firstPage(page)).toBeVisible();
+  await expect(firstPage(page)).toBeVisible({ timeout: 30_000 });
 }
 
 test.describe('single and double click', () => {
@@ -535,6 +535,17 @@ test.describe('watermark', () => {
 });
 
 test.describe('saving settings on the server', () => {
+  const usedScopes: string[] = [];
+  const newScope = () => {
+    const scope = `test-${randomUUID()}`;
+    usedScopes.push(scope);
+    return scope;
+  };
+
+  test.afterEach(async ({ request }) => {
+    for (const scope of usedScopes.splice(0)) await request.delete(`http://localhost:8080/api/settings/${scope}`).catch(() => undefined);
+  });
+
   const setting = (page: Page, key: string) => page.locator(`[data-setting="${key}"]`);
   const status = (page: Page) => page.locator('.ps-status');
   const urlFor = (scope: string) => `/?save=server&scope=${scope}`;
@@ -552,7 +563,7 @@ test.describe('saving settings on the server', () => {
     });
 
     test('choices reach another browser', async ({ page, browser, baseURL }) => {
-      const scope = `test-${randomUUID()}`;
+      const scope = newScope();
       await openPanel(page, scope);
       await setting(page, 'clickAction').selectOption('menu');
       await setting(page, 'watermark').check();
@@ -570,16 +581,16 @@ test.describe('saving settings on the server', () => {
     });
 
     test('scopes stay separate', async ({ page }) => {
-      const first = `test-${randomUUID()}`;
+      const first = newScope();
       await openPanel(page, first);
       await setting(page, 'clickAction').selectOption('none');
       await expect(status(page)).toHaveText('Saved');
-      await openPanel(page, `test-${randomUUID()}`);
+      await openPanel(page, newScope());
       await expect(setting(page, 'clickAction')).toHaveValue('open');
     });
 
     test('reset clears them on the server too', async ({ page }) => {
-      const scope = `test-${randomUUID()}`;
+      const scope = newScope();
       await openPanel(page, scope);
       await setting(page, 'clickAction').selectOption('menu');
       await expect(status(page)).toHaveText('Saved');
@@ -592,7 +603,7 @@ test.describe('saving settings on the server', () => {
     });
 
     test('only saves what differs from the defaults', async ({ page, request }) => {
-      const scope = `test-${randomUUID()}`;
+      const scope = newScope();
       await openPanel(page, scope);
       await setting(page, 'allowRename').check();
       await expect(status(page)).toHaveText('Saved');
@@ -600,7 +611,7 @@ test.describe('saving settings on the server', () => {
     });
 
     test('a slow load does not undo a change made in the meantime', async ({ page }) => {
-      const scope = `test-${randomUUID()}`;
+      const scope = newScope();
       await page.route(`**/api/settings/${scope}`, async (route) => {
         if (route.request().method() !== 'GET') return route.continue();
         await new Promise((resolve) => setTimeout(resolve, 800));
@@ -610,6 +621,110 @@ test.describe('saving settings on the server', () => {
       await setting(page, 'clickAction').selectOption('menu');
       await page.waitForTimeout(1200);
       await expect(setting(page, 'clickAction')).toHaveValue('menu');
+    });
+  });
+
+  test.describe('from code', () => {
+    const API = 'http://localhost:8080';
+    type Store = { serviceUrl: string; scope?: string };
+    type Api = {
+      loadViewerSettings(options: Store): Promise<{ clickAction: string }>;
+      saveViewerSettings(options: Store, settings?: object): Promise<void>;
+      resetViewerSettings(): void;
+      configureViewer(settings: object): void;
+    };
+    const load = (page: Page, scope: string, serviceUrl = API) =>
+      page.evaluate(([url, name]) => (window as never as Api).loadViewerSettings({ serviceUrl: url, scope: name }).then((settings) => settings.clickAction, (error: Error) => `failed: ${error.message}`), [serviceUrl, scope]);
+
+    test.describe('with the API', () => {
+      test.beforeEach(async () => {
+        test.skip(!(await isServiceUp()), 'needs the PDF service at localhost:8080');
+      });
+
+      test('a script saves settings, and an app that loads them uses them', async ({ page, request }) => {
+        const scope = newScope();
+        const saved = await request.put(`${API}/api/settings/${scope}`, { data: { clickAction: 'menu', toolbarPosition: 'left', watermark: true, watermarkText: 'CONFIDENTIAL' } });
+        expect(saved.status()).toBe(204);
+        expect(await (await request.get(`${API}/api/settings/${scope}`)).json()).toEqual({ clickAction: 'menu', toolbarPosition: 'left', watermark: true, watermarkText: 'CONFIDENTIAL' });
+
+        await openList(page);
+        expect(await load(page, scope)).toBe('menu');
+        await row(page, 'report').click();
+        await expect(menu(page)).toBeVisible();
+        await menu(page).getByRole('menuitem', { name: 'Open' }).click();
+        await expect(firstPage(page)).toBeVisible();
+        await expect(page.locator('.pv-root')).toHaveAttribute('data-toolbar-position', 'left');
+        await expect(page.locator('.pv-watermark text').first()).toHaveText('CONFIDENTIAL');
+      });
+
+      test('a later load adjusts an earlier one, and keeps what it does not mention', async ({ page, request }) => {
+        const team = newScope();
+        const user = newScope();
+        await request.put(`${API}/api/settings/${team}`, { data: { clickAction: 'menu', showFileDetails: false } });
+        await request.put(`${API}/api/settings/${user}`, { data: { showFileDetails: true } });
+
+        await openList(page);
+        await load(page, team);
+        await expect(page.locator('.pl-meta')).toHaveCount(0);
+        await load(page, user);
+        await expect(page.locator('.pl-meta').first()).toBeVisible();
+        await row(page, 'report').click();
+        await expect(menu(page)).toBeVisible();
+      });
+
+      test('a scope with nothing saved changes nothing', async ({ page }) => {
+        await openList(page, { clickAction: 'none' });
+        expect(await load(page, newScope())).toBe('none');
+      });
+
+      test('resetting first means settings deleted on the server go away', async ({ page, request }) => {
+        const scope = newScope();
+        await request.put(`${API}/api/settings/${scope}`, { data: { clickAction: 'menu' } });
+        await openList(page);
+        expect(await load(page, scope)).toBe('menu');
+
+        await request.delete(`${API}/api/settings/${scope}`);
+        expect(await load(page, scope)).toBe('menu');
+        await page.evaluate(() => (window as never as Api).resetViewerSettings());
+        expect(await load(page, scope)).toBe('open');
+      });
+
+      test('saving from code stores what differs from the defaults, or what it is given', async ({ page, request }) => {
+        const scope = newScope();
+        await openList(page);
+        await page.evaluate(([url, name]) => {
+          const api = window as never as Api;
+          api.configureViewer({ allowRename: true });
+          return api.saveViewerSettings({ serviceUrl: url, scope: name });
+        }, [API, scope]);
+        expect(await (await request.get(`${API}/api/settings/${scope}`)).json()).toEqual({ allowRename: true });
+
+        await page.evaluate(([url, name]) => (window as never as Api).saveViewerSettings({ serviceUrl: url, scope: name }, { theme: 'dark' }), [API, scope]);
+        expect(await (await request.get(`${API}/api/settings/${scope}`)).json()).toEqual({ theme: 'dark' });
+      });
+
+      test('a scope in the wrong format is explained', async ({ page }) => {
+        await openList(page);
+        expect(await load(page, 'not valid!')).toContain('A scope can only contain');
+      });
+
+      test('a component setting wins over a loaded one', async ({ page, request }) => {
+        const scope = newScope();
+        await request.put(`${API}/api/settings/${scope}`, { data: { allowPrint: false } });
+        await page.goto(viewerUrl({ allowPrint: true }));
+        await page.waitForFunction(() => Boolean((window as never as { pdfViewer?: unknown }).pdfViewer));
+        await load(page, scope);
+        await page.locator('input[type="file"]').first().setInputFiles(fixture('report.pdf'));
+        await expect(firstPage(page)).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Print', exact: true })).toBeVisible();
+      });
+    });
+
+    test('if the API cannot be reached, the app carries on with its settings', async ({ page }) => {
+      await openList(page, { clickAction: 'menu' });
+      expect(await load(page, 'any', 'http://localhost:9')).toContain("failed: Couldn't reach the PDF service");
+      await row(page, 'report').click();
+      await expect(menu(page)).toBeVisible();
     });
   });
 

@@ -388,17 +388,51 @@ These routes support the viewer's server mode. Uploaded documents are temporary:
 
 ## Viewer Settings
 
-These routes keep the viewer's [settings](viewer/README.md#saving-settings-on-the-server) on the server. A `scope` can be an app, a team or a user. It can contain letters, numbers, hyphens and underscores, up to 64 characters.
+The API can store the viewer's [settings](viewer/README.md#settings), so that they follow people between browsers and you can change them for everyone from one place. Each set of settings belongs to a **scope**, which you can use for an app, a team or a user. This section covers the server. To apply settings in your app, see [Loading settings in your app](viewer/README.md#loading-settings-in-your-app).
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/settings/{scope}` | The saved settings, or `{}` if there are none |
-| PUT | `/api/settings/{scope}` | Replace them with a flat JSON object, up to 64 KB |
-| DELETE | `/api/settings/{scope}` | Delete them |
+| PUT | `/api/settings/{scope}` | Replace them with a flat JSON object, up to 64 KB. Returns 204 |
+| DELETE | `/api/settings/{scope}` | Delete them. Returns 204 |
 
-Reading is open. Changing them needs `Authorization: Bearer <key>` once `Settings__WriteKey` is set, which you can do with `SETTINGS_WRITE_KEY` when using Docker Compose. With no key, development instances accept changes and every other environment refuses them. The API checks who may change settings, not whose they are, so to give each user their own scope, enforce that at your gateway.
+A scope can contain letters, numbers, hyphens and underscores, up to 64 characters.
 
-Settings are stored as files in `Settings__Path`, which Docker Compose keeps in the `viewer-settings` volume.
+### Saving settings
+
+Use the names from the [settings table](viewer/README.md#settings). You only need to include what differs from the defaults:
+
+```bash
+curl -X PUT http://localhost:8080/api/settings/team-a \
+  -H "Content-Type: application/json" \
+  -d '{"clickAction":"menu","toolbarPosition":"left","watermark":true,"watermarkText":"CONFIDENTIAL"}'
+
+curl http://localhost:8080/api/settings/team-a
+# {"clickAction":"menu","toolbarPosition":"left","watermark":true,"watermarkText":"CONFIDENTIAL"}
+```
+
+PUT replaces everything saved for that scope, so send the full set each time. The API doesn't check the names or values. The viewer ignores any it doesn't recognize when it loads them.
+
+### Who can change them
+
+Anyone who can reach the API can read settings, so don't put secrets in them. Changing them depends on the write key:
+
+| `Settings__WriteKey` | Development | Any other environment |
+|---|---|---|
+| Not set | Anyone can change them | Changes are refused with 403 |
+| Set | Needs the key | Needs the key |
+
+Send the key as `Authorization: Bearer <key>`. A wrong or missing key gets 401. With Docker Compose, which runs in development, set it like this:
+
+```bash
+SETTINGS_WRITE_KEY=choose-a-long-random-value docker compose up -d
+```
+
+The key allows changes to every scope, and the API can't tell whose settings are whose. To give each user their own settings, keep the key on your backend and [have it choose the scope](viewer/README.md#giving-each-user-their-own-settings).
+
+### Where they're stored
+
+Each scope is a small JSON file in the `Settings__Path` folder, so no database is needed. Docker Compose keeps them in the `viewer-settings` volume, which survives restarts and rebuilds. To back them up, copy that folder. If you run several copies of the API, point them all at the same shared folder.
 
 ## MCP Server
 

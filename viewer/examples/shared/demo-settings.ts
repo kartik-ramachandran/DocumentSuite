@@ -1,4 +1,4 @@
-import { configureViewer, getViewerSettings, onViewerSettingsChange, type SettingsPanelOptions } from '@pdf-suite/viewer';
+import { configureViewer, getViewerSettings, loadViewerSettings, onViewerSettingsChange, resetViewerSettings, saveViewerSettings, type SettingsPanelOptions } from '@pdf-suite/viewer';
 
 /** Choices are remembered in this browser. Add ?save=server to save them through the API instead. */
 export function demoPanelOptions(serviceUrl: string): SettingsPanelOptions {
@@ -16,7 +16,7 @@ export function applyDemoSettings(): void {
     ...(params.get('rename') === '1' ? { allowRename: true } : {}),
     ...(params.get('settings') ? JSON.parse(params.get('settings')!) : {}),
   });
-  Object.assign(window, { configureViewer });
+  Object.assign(window, { configureViewer, loadViewerSettings, resetViewerSettings, saveViewerSettings });
 
   const applyPageTheme = () => {
     const { theme } = getViewerSettings();

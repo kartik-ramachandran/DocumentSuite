@@ -289,25 +289,138 @@ In Vue, pass these through `:options`, and in Angular use `<pdf-suite-settings-p
 
 ### Saving settings on the server
 
-The PDF API can keep settings for you, so that they follow people between browsers. Give the panel the API's address, and a `scope` that says whose settings they are, such as an app, team or user:
+The PDF API can store settings, so that they follow people between browsers and you can change them for everyone from one place. Each set belongs to a `scope`, such as an app, team or user. The [API's documentation](../README.md#viewer-settings) covers setting up the server side, including who's allowed to change them.
 
-```tsx
-<SettingsPanel serviceUrl="https://pdf.example.com" scope="team-a" serviceHeaders={{ Authorization: `Bearer ${token}` }} />
-```
+There are two steps: **load** the settings when your app starts, and optionally give someone a way to **change** them.
 
-Choices are saved shortly after they change, and the panel says if saving fails. To apply them before anything opens, also load them when your app starts:
+If your app already stores settings for its users, you don't need the API for this. Save them from `SettingsPanel`'s `onChange`, and call `configureViewer(saved)` when your app starts.
+
+### Loading settings in your app
+
+Call `loadViewerSettings` before you start your app, so that the settings apply to the first file anyone opens. All of the framework packages export it too.
 
 ```ts
-import { loadViewerSettings } from '@pdf-suite/viewer';
-
-await loadViewerSettings({ serviceUrl: 'https://pdf.example.com', scope: 'team-a' });
+loadViewerSettings(options: {
+  serviceUrl: string;                       // the PDF API
+  scope?: string;                           // defaults to "default"
+  serviceHeaders?: Record<string, string>;  // such as a gateway's auth token
+}): Promise<PdfSuiteSettings>
 ```
 
-`saveViewerSettings(options)` saves from your own code. If your app already stores settings for its users, you don't need the API for this: leave out `serviceUrl`, save them from `onChange`, and call `configureViewer(saved)` when your app starts.
+**React**
 
-Deployed instances refuse changes until you set a write key, so read the [API's notes on this](../README.md#viewer-settings) first. A key sent from a browser can be read by its users, so for anything beyond a trusted internal app, have your backend or gateway add it.
+```tsx
+import { createRoot } from 'react-dom/client';
+import { loadViewerSettings } from '@pdf-suite/react';
+import { App } from './App';
 
-To try it in the demos, add `?save=server` to the address.
+loadViewerSettings({ serviceUrl: 'https://pdf.example.com', scope: 'team-a' })
+  .catch((error) => console.warn('Using the default viewer settings.', error))
+  .finally(() => createRoot(document.getElementById('root')!).render(<App />));
+```
+
+**Vue**
+
+```ts
+import { createApp } from 'vue';
+import { loadViewerSettings } from '@pdf-suite/vue';
+import App from './App.vue';
+
+loadViewerSettings({ serviceUrl: 'https://pdf.example.com', scope: 'team-a' })
+  .catch((error) => console.warn('Using the default viewer settings.', error))
+  .finally(() => createApp(App).mount('#app'));
+```
+
+**Angular**
+
+```ts
+import { bootstrapApplication } from '@angular/platform-browser';
+import { loadViewerSettings } from '@pdf-suite/angular';
+import { AppComponent } from './app/app.component';
+
+loadViewerSettings({ serviceUrl: 'https://pdf.example.com', scope: 'team-a' })
+  .catch((error) => console.warn('Using the default viewer settings.', error))
+  .finally(() => bootstrapApplication(AppComponent));
+```
+
+With plain JavaScript, import it from `@pdf-suite/viewer` and do the same before creating your viewer. Every `PdfViewer`, `FileList` and modal then uses these settings, with no further code.
+
+**What to expect:**
+
+- **If loading fails,** the promise rejects with a message saying why, and the viewer carries on with the settings it already had. That's what the `catch` above is for, so that a settings problem doesn't stop your app from starting.
+- **If nothing is saved** for that scope, nothing changes.
+- **Names or values the viewer doesn't recognize** are ignored, so a bad value can't break it.
+- **The order of priority,** from lowest to highest, is the defaults, then `configureViewer` and `loadViewerSettings` in the order you call them, then a component's own `settings`. To stop the server from changing something on one component, set it on that component.
+
+**Layering team and user settings.** Each load only changes the settings it contains, so a later load can adjust an earlier one:
+
+```ts
+await loadViewerSettings({ serviceUrl, scope: 'team-a' });
+await loadViewerSettings({ serviceUrl, scope: `user-${user.id}` });
+```
+
+**Picking up changes while your app is open.** The server doesn't notify the browser, so changes arrive the next time you load. To refresh without a page reload, for example when someone comes back to the tab, reset first so that anything deleted on the server goes away too:
+
+```ts
+import { loadViewerSettings, resetViewerSettings } from '@pdf-suite/viewer';
+
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return;
+  resetViewerSettings();
+  await loadViewerSettings({ serviceUrl, scope }).catch(console.warn);
+});
+```
+
+File lists update straight away. Viewers read their settings when they're created, so a viewer that's already open keeps its settings until the next one opens. `resetViewerSettings` also clears anything you set with `configureViewer`, so set those again if you use both.
+
+### Changing settings from your app
+
+There are three ways to change what's saved:
+
+- **The settings screen:** give `SettingsPanel` the same details. It loads what's saved, saves about half a second after each change, and shows whether saving worked. Choices apply in that browser even if saving fails.
+
+  ```tsx
+  <SettingsPanel
+    serviceUrl="https://pdf.example.com"
+    scope="team-a"
+    serviceHeaders={{ Authorization: `Bearer ${token}` }}
+    exclude={['mode']}
+  />
+  ```
+
+  In Vue, pass these through `:options`, and in Angular through `[options]`. Don't also set `storageKey`, or the two copies can disagree. **Reset to defaults** clears what's saved for that scope.
+
+- **Your own code:** `saveViewerSettings({ serviceUrl, scope })` saves everything that differs from the defaults. To save specific values instead, pass them as the second argument.
+
+- **Your server or a script:** call the [API](../README.md#saving-settings) directly, which suits settings that an administrator controls. People then only need `loadViewerSettings`, with no settings screen at all.
+
+Saving only stores what differs from the defaults, so that a later change to a default still reaches people. This means that if your code sets `clickAction: 'menu'` and someone chooses the default of `'open'` on the settings screen, their choice isn't stored, and your code's value comes back on the next load. Avoid setting something in code if people can also change it.
+
+### Giving each user their own settings
+
+Deployed instances refuse changes until you set a write key, and that key can change any scope. A key in a browser can be read by anyone using it, so only send one from the browser for a trusted internal app.
+
+For everything else, keep the key on your backend, and have the backend choose the scope from whoever is signed in. Point `serviceUrl` at your backend, which needs to handle `/api/settings/{scope}` below that address. As a sketch, in Express:
+
+```js
+app.all('/pdf/api/settings/:scope', requireLogin, express.json(), async (req, res) => {
+  // Ignores the scope in the address, so people can only reach their own settings.
+  const response = await fetch(`${PDF_API}/api/settings/user-${req.user.id}`, {
+    method: req.method,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SETTINGS_WRITE_KEY}` },
+    body: req.method === 'PUT' ? JSON.stringify(req.body) : undefined,
+  });
+  res.status(response.status).type('application/json').send(await response.text());
+});
+```
+
+```ts
+await loadViewerSettings({ serviceUrl: `${location.origin}/pdf`, scope: 'me' });
+```
+
+A user id has to fit the scope format: letters, numbers, hyphens and underscores, up to 64 characters in total. Hash it first if it might not.
+
+To try saving in the demos, add `?save=server` to the address.
 
 ## Options
 
