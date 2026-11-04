@@ -47,3 +47,14 @@ The browser tests that need the API are skipped if it isn't running at `localhos
 - Prefer dependencies with permissive licenses (MIT, BSD, Apache-2.0), and update [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) when you add one. AGPL dependencies can't be accepted, so avoid MuPDF, pdf2docx and Ghostscript.
 
 By contributing, you agree that your contributions are licensed under the [MIT License](LICENSE).
+
+## Releases and the website
+
+From the `viewer` folder:
+
+| Command | What it does |
+|---|---|
+| `npm run pack` | Builds the installable package files in `viewer/release`, to attach to a GitHub release |
+| `npm run site` | Builds the website and its live demo in `_site` |
+| `npm run site:deploy` | Publishes `_site` to the `gh-pages` branch |
+| `npm run screenshots` | Retakes the screenshots in `docs/screenshots` |

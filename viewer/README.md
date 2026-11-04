@@ -2,6 +2,8 @@
 
 An open-source PDF and image viewer and editor for React, Vue, Angular and plain JavaScript.
 
+**[Try it live](https://kartik-ramachandran.github.io/PDFSuite/#try)** · **[Add it to your app](#add-it-to-your-app)** · **[All settings](#settings)**
+
 - **In your app:** a file list with a right-click menu, and a window people can move and resize
 - **Viewing:** zoom, thumbnails, search, selectable text, rotation, printing and download
 - **Images:** PNG, JPEG, GIF, WebP, BMP, SVG, AVIF and ICO files open automatically, with the same toolbar, annotations and document tools as PDFs, plus pan and flip
@@ -24,69 +26,191 @@ An open-source PDF and image viewer and editor for React, Vue, Angular and plain
 
 All of these use generated sample files. To retake them, follow the steps at the top of [`scripts/take-screenshots.mjs`](scripts/take-screenshots.mjs).
 
-## Install
+## Add it to your app
 
-The packages aren't on npm yet. To use them now, build them from this repository, as described in [CONTRIBUTING.md](../CONTRIBUTING.md).
+This takes a few minutes, and PDFs and images work straight away with no server. These exact steps are tested in new React, Vue, Angular and plain JavaScript apps.
+
+**[Try the viewer live](https://kartik-ramachandran.github.io/PDFSuite/#try) first**, with nothing to install.
+
+### 1. Install the packages
+
+You always need `viewer`, then add `editor` for annotations and forms, and the package for your framework.
+
+The packages aren't on npm yet, so they install from the [GitHub release](https://github.com/kartik-ramachandran/PDFSuite/releases/latest). Your `package.json` then points at those files, and everything else works as normal.
+
+```bash
+RELEASE=https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0
+
+# Use pdf-suite-vue or pdf-suite-angular for those frameworks. For plain JavaScript, leave off the last file.
+npm install $RELEASE/pdf-suite-viewer-0.1.0.tgz $RELEASE/pdf-suite-editor-0.1.0.tgz $RELEASE/pdf-suite-react-0.1.0.tgz
+```
+
+In PowerShell, set it with `$RELEASE="https://..."`, and the `npm install` line works as it is. The commands on the [website](https://kartik-ramachandran.github.io/PDFSuite/#install) have the addresses written out in full, ready to copy.
 
 | Package | Purpose |
 |---|---|
 | `@pdf-suite/viewer` | The viewer, with no framework needed |
-| `@pdf-suite/editor` | Optional annotations, form filling and document tools |
+| `@pdf-suite/editor` | Optional annotations, form filling, watermarks and document tools |
 | `@pdf-suite/react`, `@pdf-suite/vue`, `@pdf-suite/angular` | Framework components |
 
-## Quick start
+Tested with React 19, Vue 3.5 and Angular 22. There's no stylesheet to import, because the viewer brings its own styles inside a Shadow DOM, so your app's CSS and the viewer's can't affect each other.
+
+**Bundle size:** about 225 KB gzipped for the viewer, plus about 370 KB for the PDF.js worker, which loads in the background. The code that writes PDFs, about 170 KB, only loads when someone exports annotations or a watermark.
+
+### 2. Show your files
+
+**React**
+
+```tsx
+import { createEditorPlugin } from '@pdf-suite/editor';
+import { FileList, type FileItem } from '@pdf-suite/react';
+
+const files: FileItem[] = [
+  { id: 'report', name: 'report.pdf', source: '/report.pdf' },
+  { id: 'photo', name: 'photo.png', source: '/photo.png' },
+];
+
+// Keep this outside the component, so it isn't rebuilt on every render.
+const viewer = { plugins: [createEditorPlugin()] };
+
+export function App() {
+  return <FileList files={files} viewer={viewer} />;
+}
+```
+
+**Vue**
+
+```vue
+<script setup lang="ts">
+import { createEditorPlugin } from '@pdf-suite/editor';
+import { FileList } from '@pdf-suite/vue';
+import { markRaw } from 'vue';
+
+const files = [
+  { id: 'report', name: 'report.pdf', source: '/report.pdf' },
+  { id: 'photo', name: 'photo.png', source: '/photo.png' },
+];
+
+// markRaw stops Vue from wrapping the plugin in a reactive proxy.
+const options = markRaw({ viewer: { plugins: [createEditorPlugin()] } });
+</script>
+
+<template>
+  <FileList :files="files" :options="options" />
+</template>
+```
+
+**Angular**
+
+```ts
+import { Component } from '@angular/core';
+import { createEditorPlugin } from '@pdf-suite/editor';
+import { FileListComponent, type FileItem } from '@pdf-suite/angular';
+
+@Component({
+  selector: 'app-root',
+  imports: [FileListComponent],
+  template: '<pdf-suite-file-list [files]="files" [options]="options" />',
+})
+export class AppComponent {
+  readonly files: FileItem[] = [
+    { id: 'report', name: 'report.pdf', source: '/report.pdf' },
+    { id: 'photo', name: 'photo.png', source: '/photo.png' },
+  ];
+
+  readonly options = { viewer: { plugins: [createEditorPlugin()] } };
+}
+```
+
+**Plain JavaScript**
+
+```js
+import { createFileList } from '@pdf-suite/viewer';
+import { createEditorPlugin } from '@pdf-suite/editor';
+
+createFileList(document.getElementById('files'), {
+  files: [
+    { id: 'report', name: 'report.pdf', source: '/report.pdf' },
+    { id: 'photo', name: 'photo.png', source: '/photo.png' },
+  ],
+  viewer: { plugins: [createEditorPlugin()] },
+});
+```
+
+That's a working integration: clicking a file opens it in a window people can move, resize and annotate in. A URL on another domain needs CORS headers from that server, like anything fetched from a browser.
+
+### 3. Use your own files
+
+Files usually come from your backend. `source` can be a URL, the file's contents, or a function, so that a file is only fetched when someone opens it. If `source` needs a login, pass headers with it:
+
+```ts
+const response = await fetch('/api/documents');
+const documents = await response.json();
+
+const files = documents.map((document) => ({
+  id: document.id,
+  name: document.fileName,
+  size: document.size,
+  modified: document.updatedAt,
+  source: { url: `/api/documents/${document.id}/content`, headers: { Authorization: `Bearer ${token}` } },
+}));
+```
+
+### 4. Connect the API, if you need it
+
+The API adds Word, Excel, PowerPoint, HTML, Markdown and text files, the document tools, server rendering and saved settings. Everything else works without it.
+
+```bash
+git clone https://github.com/kartik-ramachandran/PDFSuite.git
+cd PDFSuite
+docker compose up -d --build
+```
+
+Then tell the viewer where it is:
+
+```ts
+const viewer = { serviceUrl: 'http://localhost:8080', plugins: [createEditorPlugin()] };
+```
+
+Read [SECURITY.md](../SECURITY.md) before deploying the API, because it has no login or rate limits of its own.
+
+### 5. Save edited files back to your app
+
+The viewer gives you the finished file, including annotations and form values. Open the modal yourself to add your own save button or logic:
+
+```ts
+import { openViewerModal } from '@pdf-suite/viewer';
+import { createEditorPlugin } from '@pdf-suite/editor';
+
+const modal = openViewerModal({ title: file.name, plugins: [createEditorPlugin()] });
+await modal.load(file.url, file.name);
+
+async function save() {
+  const bytes = await modal.viewer.getBytes();
+  await fetch(`/api/documents/${file.id}/content`, { method: 'PUT', body: bytes });
+  modal.viewer.markSaved(); // closing the window won't ask about unsaved changes
+}
+```
+
+### 6. Adjust how it behaves
+
+Everything from what a click does to where the toolbar sits is in the [settings](#settings), and the guides below cover each part in more detail.
+
+### Just the viewer, without the file list
 
 The viewer fills its parent element, so **give the parent a height**.
-
-### React
 
 ```tsx
 import { PdfViewer } from '@pdf-suite/react';
 
-export function App() {
-  return (
-    <div style={{ height: '100vh' }}>
-      <PdfViewer source="/report.pdf" />
-    </div>
-  );
-}
+<div style={{ height: '100vh' }}>
+  <PdfViewer source="/report.pdf" />
+</div>
 ```
 
-### Vue
+In Vue it's `<PdfViewer source="/report.pdf" />` too, and in Angular `<pdf-suite-viewer source="/report.pdf" />`, with `PdfViewerComponent` in your component's `imports`. In plain JavaScript, use `createViewer(element, { source: '/report.pdf' })`.
 
-```vue
-<script setup>
-import { PdfViewer } from '@pdf-suite/vue';
-</script>
-
-<template>
-  <div style="height: 100vh">
-    <PdfViewer source="/report.pdf" />
-  </div>
-</template>
-```
-
-### Angular
-
-```ts
-import { Component } from '@angular/core';
-import { PdfViewerComponent } from '@pdf-suite/angular';
-
-@Component({
-  selector: 'app-root',
-  imports: [PdfViewerComponent],
-  template: '<div style="height: 100vh"><pdf-suite-viewer source="/report.pdf" /></div>',
-})
-export class AppComponent {}
-```
-
-### Plain JavaScript
-
-```js
-import { createViewer } from '@pdf-suite/viewer';
-
-const viewer = createViewer(document.getElementById('viewer'), { source: '/report.pdf' });
-```
+Both can also be controlled from code, which the [API section](#api) covers.
 
 ## Viewing files in a modal
 

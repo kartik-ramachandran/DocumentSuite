@@ -31,8 +31,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kartik-ramachandran/PDF.git",
+    "url": "git+https://github.com/kartik-ramachandran/PDFSuite.git",
     "directory": "viewer/packages/editor"
   },
-  "homepage": "https://github.com/kartik-ramachandran/PDF/tree/main/viewer#readme"
+  "homepage": "https://github.com/kartik-ramachandran/PDFSuite/tree/main/viewer#readme",
+  "keywords": [
+    "pdf",
+    "pdf-editor",
+    "annotations",
+    "pdf-forms",
+    "watermark",
+    "signature"
+  ],
+  "bugs": {
+    "url": "https://github.com/kartik-ramachandran/PDFSuite/issues"
+  }
 }

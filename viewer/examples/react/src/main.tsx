@@ -7,11 +7,13 @@ import { createSampleFiles, filesFromInput } from '../../shared/sample-files';
 
 // Query parameters let the same demo run every mode: ?view=viewer&mode=server&transport=json&editor=0&rename=1
 const params = new URLSearchParams(location.search);
+// The demo on the website has no API behind it.
+const onWebsite = (import.meta as unknown as { env: Record<string, string | undefined> }).env.VITE_PAGES === '1';
 applyDemoSettings();
 
 const viewerOptions = (plugin: ReturnType<typeof createEditorPlugin> | null): ViewerOptions => ({
   mode: (params.get('mode') as ViewerOptions['mode']) ?? undefined,
-  serviceUrl: params.get('service') ?? 'http://localhost:8080',
+  serviceUrl: params.get('service') ?? (onWebsite ? undefined : 'http://localhost:8080'),
   serviceTransport: (params.get('transport') as ViewerOptions['serviceTransport']) ?? 'multipart',
   plugins: plugin ? [plugin] : [],
 });
@@ -37,13 +39,14 @@ function FilesDemo() {
   const options = useMemo(() => viewerOptions(params.get('editor') === '0' ? null : createEditorPlugin()), []);
 
   useEffect(() => {
-    void createSampleFiles().then(setFiles);
+    void createSampleFiles({ needsApi: !onWebsite }).then(setFiles);
   }, []);
 
   return (
     <main style={{ maxWidth: 900, margin: '32px auto', padding: '0 16px', fontFamily: 'system-ui, sans-serif' }}>
       <h1 style={{ fontSize: 22 }}>Your files</h1>
       <p>Click a file to open it, or right-click it for more actions.</p>
+      {onWebsite && <p style={{ fontSize: 14, opacity: 0.8 }}>This runs in your browser, and your files aren't uploaded. PDFs and images work here. Word, Excel and PowerPoint files need the API, which you can run yourself.</p>}
       <p>
         <label>
           Add files <input type="file" multiple aria-label="Add files" onChange={(event) => {
@@ -54,7 +57,7 @@ function FilesDemo() {
       </p>
       <details style={{ marginBottom: 16 }}>
         <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Settings</summary>
-        <div style={{ marginTop: 12 }}><SettingsPanel {...demoPanelOptions(viewerOptions(null).serviceUrl!)} /></div>
+        <div style={{ marginTop: 12 }}><SettingsPanel {...demoPanelOptions(viewerOptions(null).serviceUrl ?? '')} exclude={onWebsite ? ['mode'] : undefined} /></div>
       </details>
       <FileList
         files={files}

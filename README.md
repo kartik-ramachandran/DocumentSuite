@@ -1,10 +1,14 @@
 # PDF Suite
 
+[![MIT License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Latest release](https://img.shields.io/github/v/release/kartik-ramachandran/PDFSuite)](https://github.com/kartik-ramachandran/PDFSuite/releases/latest) [![Live demo](https://img.shields.io/badge/demo-try_it_live-a83f22)](https://kartik-ramachandran.github.io/PDFSuite/#try)
+
 Open-source PDF tools you run yourself: a REST API, an MCP server for AI clients, and a viewer and editor you can embed in React, Vue, Angular or plain JavaScript apps.
 
 Everything runs on your own infrastructure, so documents stay with you. The one exception is the optional AI review, which is off by default and sends documents to the Azure OpenAI service you configure.
 
-![The viewer open in a window, with a highlight, a rectangle, a text note and a comment on a sample report](docs/screenshots/viewer-modal.png)
+**[Try the viewer live](https://kartik-ramachandran.github.io/PDFSuite/#try)**, with nothing to install · **[Add it to your app](viewer/README.md#add-it-to-your-app)** · **[Website](https://kartik-ramachandran.github.io/PDFSuite/)**
+
+![A file opening from a list, being annotated, and the settings moving the toolbar](docs/screenshots/demo.gif)
 
 ## What it does
 
@@ -21,6 +25,8 @@ More than 40 routes, which you can call with file uploads or with base64 inside 
 ### Show and edit documents inside your app
 
 The [viewer](viewer/README.md) gives your users a list of files that open in a window they can move and resize, without leaving your app. A click or right-click on a file opens it or shows its menu.
+
+It takes a few minutes to [add it to a React, Vue, Angular or plain JavaScript app](viewer/README.md#add-it-to-your-app), and PDFs and images work with no server.
 
 | | |
 |---|---|
@@ -53,8 +59,8 @@ The [MCP server](#mcp-server) gives AI clients six tools for working with docume
 You need Docker.
 
 ```bash
-git clone https://github.com/kartik-ramachandran/PDF.git
-cd PDF
+git clone https://github.com/kartik-ramachandran/PDFSuite.git
+cd PDFSuite
 docker compose up -d --build
 ```
 
@@ -82,7 +88,7 @@ Then open http://localhost:5173. The list has sample files to click on, and **Se
 
 This is an early release, at version 0.1.0.
 
-- **The viewer packages aren't on npm yet.** To use them now, build them from this repository, as [CONTRIBUTING.md](CONTRIBUTING.md) describes
+- **The viewer packages aren't on npm yet.** They [install from the GitHub release](viewer/README.md#1-install-the-packages) for now
 - **The API needs protecting.** Put it behind your own gateway for login and rate limits
 - **Viewer settings shape the interface, and aren't security controls.** Turning off downloads or adding a watermark happens in the browser, so protect sensitive documents on your server
 

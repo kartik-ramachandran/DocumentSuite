@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF Suite: an open-source PDF viewer, editor and API you run yourself</title>
+<meta name="description" content="Add a PDF and image viewer and editor to React, Vue or Angular apps. Convert, edit and OCR documents with a REST API, and connect AI clients over MCP. Free, MIT licensed and self-hosted.">
+<meta property="og:title" content="PDF Suite: PDFs in your app, on your terms">
+<meta property="og:description" content="An open-source PDF viewer, editor, REST API and MCP server. MIT licensed and self-hosted. Try the viewer live, with nothing to install.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kartik-ramachandran.github.io/PDFSuite/">
+<meta property="og:image" content="https://kartik-ramachandran.github.io/PDFSuite/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f6f1e4;
+  --card: #fcf9f0;
+  --ink: #16213a;
+  --body: #39415a;
+  --muted: #5d6272;
+  --line: #d9d1bc;
+  --accent: #a83f22;
+  --button: #16213a;
+  --button-text: #fbf8ef;
+  --code: #141b2d;
+  --code-text: #e6e9f2;
+  --code-muted: #9aa3b8;
+  --shadow: 0 18px 50px rgba(40, 34, 18, 0.16);
+  --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --sans: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #12151d;
+    --card: #1a1f2b;
+    --ink: #f1ece0;
+    --body: #c5c8d2;
+    --muted: #9ea3b1;
+    --line: #333a49;
+    --accent: #ec8a68;
+    --button: #f1ece0;
+    --button-text: #12151d;
+    --code: #0c0f16;
+    --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+body { margin: 0; background: var(--paper); color: var(--body); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
+em { color: var(--accent); font-style: italic; }
+
+/* Navigation */
+.nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--paper) 90%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.nav .wrap { display: flex; align-items: center; gap: 24px; min-height: 60px; }
+.brand { display: flex; align-items: center; gap: 9px; color: var(--ink); font: 500 21px var(--serif); text-decoration: none; }
+.brand img { width: 26px; height: 26px; }
+.links { display: flex; gap: 20px; margin-right: auto; font-size: 14px; }
+.links a { color: var(--body); text-decoration: none; }
+.links a:hover { color: var(--accent); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border: 1px solid var(--button); border-radius: 8px; background: var(--button); color: var(--button-text); font: 500 15px var(--sans); text-decoration: none; cursor: pointer; }
+.btn:hover { opacity: 0.88; }
+.btn.ghost { background: transparent; border-color: var(--line); color: var(--ink); }
+.btn.ghost:hover { border-color: var(--ink); opacity: 1; }
+.nav .btn { min-height: 38px; padding: 0 14px; font-size: 14px; }
+
+/* Hero */
+.hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; padding: 72px 0 56px; }
+h1 { margin: 0 0 20px; color: var(--ink); font: 400 clamp(44px, 6.2vw, 72px)/1.04 var(--serif); letter-spacing: -0.015em; }
+.lede { max-width: 34em; margin: 0 0 26px; font-size: 19px; line-height: 1.55; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+.facts { margin: 0; color: var(--muted); font: 13px/1.7 var(--mono); }
+.label { margin: 0 0 12px; color: var(--muted); font: 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* Code */
+.code { position: relative; border-radius: 10px; background: var(--code); color: var(--code-text); font: 13px/1.65 var(--mono); }
+.code pre { margin: 0; padding: 16px 18px; overflow-x: auto; tab-size: 2; }
+.code .c { color: var(--code-muted); }
+.copy { position: absolute; top: 8px; right: 8px; min-height: 30px; padding: 0 10px; border: 1px solid #39425a; border-radius: 6px; background: var(--code); color: var(--code-text); font: 12px var(--sans); cursor: pointer; }
+.copy:hover { background: #262e44; }
+
+/* Sections */
+section { padding: 56px 0; }
+.head { padding-top: 26px; border-top: 1px solid var(--ink); margin-bottom: 26px; }
+.head .num { display: block; margin-bottom: 6px; color: var(--accent); font: 12px var(--mono); letter-spacing: 0.08em; }
+h2 { margin: 0 0 10px; color: var(--ink); font: 400 clamp(32px, 4vw, 44px)/1.12 var(--serif); letter-spacing: -0.01em; }
+.head p { max-width: 42em; margin: 0; font-size: 17px; }
+h3 { margin: 0 0 6px; color: var(--ink); font: 500 21px/1.25 var(--serif); }
+
+/* Index strip */
+.strip { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 10px; background: var(--card); overflow: hidden; }
+.strip a { display: block; padding: 16px 18px; border-left: 1px solid var(--line); text-decoration: none; }
+.strip a:first-child { border-left: 0; }
+.strip a:hover { background: var(--paper); }
+.strip b { display: block; color: var(--ink); font: 500 15px var(--sans); }
+.strip span { color: var(--muted); font-size: 13px; line-height: 1.4; display: block; }
+
+/* Live demo and screenshots */
+.frame { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: var(--shadow); }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--line); color: var(--muted); font: 12px var(--mono); }
+.bar a { color: var(--accent); white-space: nowrap; }
+iframe { display: block; width: 100%; height: 640px; border: 0; background: var(--paper); }
+.note { margin: 14px 0 0; color: var(--muted); font-size: 14px; }
+
+/* Tabs */
+[role='tablist'] { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+[role='tab'] { min-height: 38px; padding: 0 15px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--body); font: 500 14px var(--sans); cursor: pointer; }
+[role='tab']:hover { border-color: var(--ink); }
+[role='tab'][aria-selected='true'] { border-color: var(--button); background: var(--button); color: var(--button-text); }
+[role='tabpanel'][hidden] { display: none; }
+.shot figcaption { padding: 12px 16px; border-top: 1px solid var(--line); font-size: 15px; }
+.shot figcaption b { color: var(--ink); font-weight: 600; }
+figure { margin: 0; }
+
+/* Cards */
+.grid { display: grid; gap: 14px; }
+.grid.three { grid-template-columns: repeat(3, 1fr); }
+.grid.two { grid-template-columns: repeat(2, 1fr); align-items: start; gap: 28px; }
+.card { padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.card p { margin: 0; font-size: 15px; }
+.steps { margin: 0 0 18px; padding: 0; list-style: none; counter-reset: step; }
+.steps > li { position: relative; padding: 0 0 26px 44px; counter-increment: step; }
+.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--ink); border-radius: 50%; color: var(--ink); font: 13px var(--mono); }
+.steps p { margin: 0 0 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { color: var(--muted); font: 12px var(--mono); letter-spacing: 0.04em; text-transform: uppercase; }
+td:first-child { color: var(--ink); font-weight: 500; }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+ul.plain { margin: 0; padding-left: 18px; }
+ul.plain li { margin-bottom: 8px; }
+.final { padding: 64px 0; text-align: center; border-top: 1px solid var(--ink); }
+.final h2 { margin-bottom: 18px; }
+.final .actions { justify-content: center; margin-bottom: 0; }
+footer { padding: 24px 0 36px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+footer a { margin-left: 16px; }
+footer a:first-child { margin-left: 0; }
+
+@media (max-width: 900px) {
+  .links { display: none; }
+  .nav .wrap { justify-content: space-between; }
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 32px; padding: 44px 0 36px; }
+  .strip { grid-template-columns: repeat(2, 1fr); }
+  .strip a:nth-child(odd) { border-left: 0; }
+  .strip a:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .grid.three, .grid.two { grid-template-columns: minmax(0, 1fr); }
+  iframe { height: 560px; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="logo.svg" alt="" width="26" height="26">PDF Suite</a>
+    <div class="links">
+      <a href="#try">Try it</a>
+      <a href="#viewer">Viewer</a>
+      <a href="#install">Install</a>
+      <a href="#settings">Settings</a>
+      <a href="#api">API</a>
+      <a href="#ai">AI clients</a>
+      <a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/viewer/README.md">Docs</a>
+    </div>
+    <a class="btn" href="https://github.com/kartik-ramachandran/PDFSuite">View on GitHub</a>
+  </div>
+</nav>
+
+<main id="top">
+  <div class="wrap">
+    <header class="hero">
+      <div>
+        <h1>PDFs in your app, <em>on your terms.</em></h1>
+        <p class="lede">An open-source PDF and image viewer and editor for React, Vue and Angular, a REST API for converting and editing documents, and an MCP server for AI clients. All of it runs on your own infrastructure.</p>
+        <div class="actions">
+          <a class="btn" href="#try">Try it live</a>
+          <a class="btn ghost" href="#install">Add it to your app</a>
+        </div>
+        <p class="facts">Free · MIT licensed · No account or per-seat fees<br>Works with React, Vue, Angular and plain JavaScript</p>
+      </div>
+      <div>
+        <p class="label">Add a file list and viewer to a React app</p>
+        <div class="code">
+<pre><code>import { FileList } from '@pdf-suite/react';
+import { createEditorPlugin } from '@pdf-suite/editor';
+
+const files = [
+  { id: '1', name: 'report.pdf', source: '/report.pdf' },
+  { id: '2', name: 'photo.png', source: '/photo.png' },
+];
+
+const viewer = { plugins: [createEditorPlugin()] };
+
+export function App() {
+  return &lt;FileList files={files} viewer={viewer} /&gt;;
+}</code></pre>
+        </div>
+        <p class="note">That's the whole integration: click a file, and it opens in a window people can move, resize and annotate in.</p>
+      </div>
+    </header>
+
+    <nav class="strip" aria-label="What's included">
+      <a href="#viewer"><b>Viewer and editor</b><span>Annotate, fill forms and search, in your app</span></a>
+      <a href="#settings"><b>Settings</b><span>Clicks, toolbar, watermark and more</span></a>
+      <a href="#api"><b>REST API</b><span>Convert, edit, OCR, redact and compare</span></a>
+      <a href="#ai"><b>MCP server</b><span>Document tools for AI clients</span></a>
+    </nav>
+
+    <section id="try">
+      <div class="head">
+        <span class="num">01 · TRY IT</span>
+        <h2>The real viewer, <em>right here.</em></h2>
+        <p>This isn't a video. Click a file to open it, draw on it, leave a comment and download the result. You can add your own PDFs and images too.</p>
+      </div>
+      <div class="frame">
+        <div class="bar"><span>Runs in your browser. Your files aren't uploaded.</span><a href="demo/" target="_blank" rel="noopener">Open full screen ↗</a></div>
+        <iframe src="demo/" title="Live demo of the PDF Suite viewer, with sample files" loading="lazy"></iframe>
+      </div>
+      <p class="note">Word, Excel and PowerPoint files and the document tools need the API, which this page doesn't run. <a href="#run">Run it yourself</a> to try those in a couple of minutes.</p>
+    </section>
+
+    <section id="viewer">
+      <div class="head">
+        <span class="num">02 · THE VIEWER</span>
+        <h2>Everything people expect, <em>inside your app.</em></h2>
+        <p>Your users stay in your product. Zoom, thumbnails, search and printing are built in, and the optional editor adds highlights, drawing, text, comments, signatures and form filling, all saved into the PDF.</p>
+      </div>
+      <div class="tabs">
+        <div role="tablist" aria-label="Viewer features">
+          <button role="tab" id="t-annotate" aria-controls="p-annotate" aria-selected="true">Annotate</button>
+          <button role="tab" id="t-list" aria-controls="p-list" aria-selected="false" tabindex="-1">File list</button>
+          <button role="tab" id="t-images" aria-controls="p-images" aria-selected="false" tabindex="-1">Images</button>
+          <button role="tab" id="t-office" aria-controls="p-office" aria-selected="false" tabindex="-1">Office files</button>
+          <button role="tab" id="t-tools" aria-controls="p-tools" aria-selected="false" tabindex="-1">Document tools</button>
+          <button role="tab" id="t-watermark" aria-controls="p-watermark" aria-selected="false" tabindex="-1">Watermark</button>
+          <button role="tab" id="t-toolbar" aria-controls="p-toolbar" aria-selected="false" tabindex="-1">Toolbar position</button>
+        </div>
+        <div role="tabpanel" id="p-annotate" aria-labelledby="t-annotate">
+          <figure class="frame shot"><img src="screenshots/viewer-modal.png" width="1280" height="800" alt="A report in the viewer window with a highlight, a rectangle, a text note and a comment">
+          <figcaption><b>Annotations become part of the PDF.</b> Drawings and text become page content, and comments become real PDF comments that other PDF apps can read.</figcaption></figure>
+        </div>
+        <div role="tabpanel" id="p-list" aria-labelledby="t-list" hidden>
+          <figure class="frame shot"><img src="screenshots/file-list.png" width="1280" height="460" loading="lazy" alt="A list of files with the right-click menu open on one of them">
+          <figcaption><b>A file list that opens in a window.</b> Choose what a click does, add your own menu items, and resize or move the window. Downloads keep the uploaded name.</figcaption></figure>
+        </div>
+        <div role="tabpanel" id="p-images" aria-labelledby="t-images" hidden>
+          <figure class="frame shot"><img src="screenshots/image-viewer.png" width="1280" height="800" loading="lazy" alt="A photo in the viewer, with rotate and flip buttons in the toolbar">
+          <figcaption><b>Images just work.</b> PNG, JPEG, GIF, WebP, BMP, SVG, AVIF and ICO files open automatically, with the same annotation tools, plus pan and flip.</figcaption></figure>
+        </div>
+        <div role="tabpanel" id="p-office" aria-labelledby="t-office" hidden>
+          <figure class="frame shot"><img src="screenshots/word-document.png" width="1280" height="800" loading="lazy" alt="A Word document open in the viewer">
+          <figcaption><b>Word, Excel and PowerPoint files, with the API.</b> The API converts them for viewing, and an unedited file still downloads in its original format.</figcaption></figure>
+        </div>
+        <div role="tabpanel" id="p-tools" aria-labelledby="t-tools" hidden>
+          <figure class="frame shot"><img src="screenshots/document-tools.png" width="1280" height="800" loading="lazy" alt="The side panel showing the document tools, with the Watermark tool open">
+          <figcaption><b>Document tools, with the API.</b> Organize pages, redact, compress, run OCR, convert and more, from a side panel in the viewer.</figcaption></figure>
+        </div>
+        <div role="tabpanel" id="p-watermark" aria-labelledby="t-watermark" hidden>
+          <figure class="frame shot"><img src="screenshots/watermark.png" width="1280" height="800" loading="lazy" alt="A report with CONFIDENTIAL written diagonally across the page">
+          <figcaption><b>A watermark on every page.</b> Turn it on in settings, and it appears on screen and goes into prints and downloads.</figcaption></figure>
+        </div>
+        <div role="tabpanel" id="p-toolbar" aria-labelledby="t-toolbar" hidden>
+          <figure class="frame shot"><img src="screenshots/toolbar-left.png" width="1280" height="800" loading="lazy" alt="The viewer with its toolbar down the left side">
+          <figcaption><b>The toolbar where you want it.</b> Top, bottom, left or right, set in one setting.</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="head">
+        <span class="num">03 · ADD IT TO YOUR APP</span>
+        <h2>Three steps, <em>no build tricks.</em></h2>
+        <p>Install the packages, render the component, and you're done. PDFs and images work straight away with no server. The steps below are the same ones we test in new apps.</p>
+      </div>
+      <div class="tabs">
+        <div role="tablist" aria-label="Framework">
+          <button role="tab" id="t-react" aria-controls="p-react" aria-selected="true">React</button>
+          <button role="tab" id="t-vue" aria-controls="p-vue" aria-selected="false" tabindex="-1">Vue</button>
+          <button role="tab" id="t-angular" aria-controls="p-angular" aria-selected="false" tabindex="-1">Angular</button>
+          <button role="tab" id="t-js" aria-controls="p-js" aria-selected="false" tabindex="-1">Plain JavaScript</button>
+        </div>
+
+        <div role="tabpanel" id="p-react" aria-labelledby="t-react">
+          <ol class="steps">
+            <li><p><b>Install</b> the packages.</p>
+              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-viewer-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-editor-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-react-0.1.0.tgz</code></pre></div></li>
+            <li><p><b>Render</b> your files.</p>
+              <div class="code"><pre><code>import { createEditorPlugin } from '@pdf-suite/editor';
+import { FileList, type FileItem } from '@pdf-suite/react';
+
+const files: FileItem[] = [
+  { id: 'report', name: 'report.pdf', source: '/report.pdf' },
+  { id: 'photo', name: 'photo.png', source: '/photo.png' },
+];
+
+<span class="c">// Keep this outside the component, so it isn't rebuilt on every render.</span>
+const viewer = { plugins: [createEditorPlugin()] };
+
+export function App() {
+  return &lt;FileList files={files} viewer={viewer} /&gt;;
+}</code></pre></div></li>
+            <li><p><b>Optional:</b> add the API for Office files and document tools. See <a href="#connect">connecting the API</a>.</p></li>
+          </ol>
+        </div>
+
+        <div role="tabpanel" id="p-vue" aria-labelledby="t-vue" hidden>
+          <ol class="steps">
+            <li><p><b>Install</b> the packages.</p>
+              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-viewer-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-editor-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-vue-0.1.0.tgz</code></pre></div></li>
+            <li><p><b>Render</b> your files.</p>
+              <div class="code"><pre><code>&lt;script setup lang="ts"&gt;
+import { createEditorPlugin } from '@pdf-suite/editor';
+import { FileList } from '@pdf-suite/vue';
+import { markRaw } from 'vue';
+
+const files = [
+  { id: 'report', name: 'report.pdf', source: '/report.pdf' },
+  { id: 'photo', name: 'photo.png', source: '/photo.png' },
+];
+
+<span class="c">// markRaw stops Vue from wrapping the plugin in a reactive proxy.</span>
+const options = markRaw({ viewer: { plugins: [createEditorPlugin()] } });
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;FileList :files="files" :options="options" /&gt;
+&lt;/template&gt;</code></pre></div></li>
+            <li><p><b>Optional:</b> add the API for Office files and document tools. See <a href="#connect">connecting the API</a>.</p></li>
+          </ol>
+        </div>
+
+        <div role="tabpanel" id="p-angular" aria-labelledby="t-angular" hidden>
+          <ol class="steps">
+            <li><p><b>Install</b> the packages.</p>
+              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-viewer-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-editor-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-angular-0.1.0.tgz</code></pre></div></li>
+            <li><p><b>Render</b> your files.</p>
+              <div class="code"><pre><code>import { Component } from '@angular/core';
+import { createEditorPlugin } from '@pdf-suite/editor';
+import { FileListComponent, type FileItem } from '@pdf-suite/angular';
+
+@Component({
+  selector: 'app-root',
+  imports: [FileListComponent],
+  template: '&lt;pdf-suite-file-list [files]="files" [options]="options" /&gt;',
+})
+export class AppComponent {
+  readonly files: FileItem[] = [
+    { id: 'report', name: 'report.pdf', source: '/report.pdf' },
+    { id: 'photo', name: 'photo.png', source: '/photo.png' },
+  ];
+
+  readonly options = { viewer: { plugins: [createEditorPlugin()] } };
+}</code></pre></div></li>
+            <li><p><b>Optional:</b> add the API for Office files and document tools. See <a href="#connect">connecting the API</a>.</p></li>
+          </ol>
+        </div>
+
+        <div role="tabpanel" id="p-js" aria-labelledby="t-js" hidden>
+          <ol class="steps">
+            <li><p><b>Install</b> the packages.</p>
+              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-viewer-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-editor-0.1.0.tgz</code></pre></div></li>
+            <li><p><b>Render</b> your files, with any bundler.</p>
+              <div class="code"><pre><code>import { createFileList } from '@pdf-suite/viewer';
+import { createEditorPlugin } from '@pdf-suite/editor';
+
+createFileList(document.getElementById('files'), {
+  files: [
+    { id: 'report', name: 'report.pdf', source: '/report.pdf' },
+    { id: 'photo', name: 'photo.png', source: '/photo.png' },
+  ],
+  viewer: { plugins: [createEditorPlugin()] },
+});</code></pre></div></li>
+            <li><p><b>Optional:</b> add the API for Office files and document tools. See <a href="#connect">connecting the API</a>.</p></li>
+          </ol>
+        </div>
+      </div>
+
+      <div id="connect" class="grid two">
+        <div>
+          <h3>Connecting the API</h3>
+          <p>Start the API, then tell the viewer where it is. This adds Office files and the document tools.</p>
+          <div class="code"><pre><code><span class="c"># In a clone of this repository</span>
+docker compose up -d --build</code></pre></div>
+          <br>
+          <div class="code"><pre><code>const viewer = {
+  serviceUrl: 'http://localhost:8080',
+  plugins: [createEditorPlugin()],
+};</code></pre></div>
+        </div>
+        <div>
+          <h3>Files behind a login</h3>
+          <p>Pass headers with a URL, or fetch the file only when someone opens it.</p>
+          <div class="code"><pre><code>{ id: '1', name: 'a.pdf', source: {
+    url: '/secure/a.pdf',
+    headers: { Authorization: `Bearer ${token}` },
+} }
+
+{ id: '2', name: 'b.pdf', source: () =&gt; getFileUrl('2') }</code></pre></div>
+          <p class="note"><a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/viewer/README.md#add-it-to-your-app">Read the full integration guide →</a></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="settings">
+      <div class="head">
+        <span class="num">04 · SETTINGS</span>
+        <h2>One place to <em>change how it behaves.</em></h2>
+        <p>What a click does, where the toolbar sits, whether downloads are allowed, the watermark: all of it is a setting. Set them in code, give people a ready-made screen, and keep the choices in the browser or on your server.</p>
+      </div>
+      <div class="grid two">
+        <figure class="frame"><img src="screenshots/settings-panel.png" width="900" height="826" alt="The settings screen, with groups for the file list, viewer window, downloads, viewer, editing and watermark"></figure>
+        <div>
+          <h3>For your whole app</h3>
+          <div class="code"><pre><code>import { configureViewer } from '@pdf-suite/react';
+
+configureViewer({
+  clickAction: 'menu',
+  toolbarPosition: 'left',
+  allowRename: true,
+});</code></pre></div>
+          <br>
+          <h3>Saved on your server</h3>
+          <p>Each app, team or user can have their own, and they follow people between browsers.</p>
+          <div class="code"><pre><code>import { loadViewerSettings } from '@pdf-suite/react';
+
+await loadViewerSettings({
+  serviceUrl: 'https://pdf.example.com',
+  scope: 'team-a',
+});</code></pre></div>
+          <p class="note"><a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/viewer/README.md#settings">See every setting →</a></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="api">
+      <div class="head">
+        <span class="num">05 · REST API</span>
+        <h2>Document work, <em>without a third party.</em></h2>
+        <p>More than 40 routes, which you can call with file uploads or base64 inside JSON. Your documents stay on your servers.</p>
+      </div>
+      <div class="grid three">
+        <div class="card"><h3>Convert</h3><p>Between PDF and Word, Excel, PowerPoint, HTML, Markdown, text and images. PDF to Office gives editable documents, not pictures of pages.</p></div>
+        <div class="card"><h3>Edit</h3><p>Merge, split, organize, rotate, crop, compress, watermark, and add page numbers or image stamps.</p></div>
+        <div class="card"><h3>Read</h3><p>OCR for scanned pages, searchable PDFs, document structure as JSON, and text and visual comparison.</p></div>
+        <div class="card"><h3>Protect</h3><p>Permanent redaction, passwords and metadata removal.</p></div>
+        <div class="card"><h3>Forms</h3><p>List and fill PDF form fields, and optionally flatten them.</p></div>
+        <div class="card"><h3>Your language</h3><p>It's plain HTTP, and the README has examples for curl, PowerShell, C#, Python and JavaScript.</p></div>
+      </div>
+      <br>
+      <div class="code"><pre><code>curl -o report.pdf -F "files=@report.docx" http://localhost:8080/api/pdf/word-to-pdf</code></pre></div>
+    </section>
+
+    <section id="ai">
+      <div class="head">
+        <span class="num">06 · AI CLIENTS</span>
+        <h2>Document tools <em>that don't waste tokens.</em></h2>
+        <p>The MCP server gives AI clients six tools. Files stay in a workspace folder and are referred to by name, so documents never pass through the model, and results come back as short summaries.</p>
+      </div>
+      <div class="grid two">
+        <div class="code"><pre><code>{
+  "mcpServers": {
+    "pdf": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm",
+        "-v", "/path/to/your/documents:/workspace",
+        "-e", "Mcp__WorkspaceRoot=/workspace",
+        "pdf-service", "--mcp-stdio"]
+    }
+  }
+}</code></pre></div>
+        <div>
+          <ul class="plain">
+            <li><b>Inspect and read:</b> page counts and text, with OCR on scanned pages</li>
+            <li><b>Convert and create:</b> to and from Office files, images and more</li>
+            <li><b>Edit:</b> compress, split, redact, watermark and others, in one tool</li>
+            <li><b>Compare:</b> a summary of changes, with the full report saved as a file</li>
+          </ul>
+          <p class="note">Build the image first with <code>docker build -t pdf-service backend</code>. <a href="https://github.com/kartik-ramachandran/PDFSuite#mcp-server">Read the MCP guide →</a></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="run">
+      <div class="head">
+        <span class="num">07 · BEFORE YOU DEPLOY</span>
+        <h2>What it needs, <em>plainly.</em></h2>
+        <p>This is an early release, at version 0.1.0. Here's what works without a server, and what to take care of before going to production.</p>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>You want</th><th>In the browser only</th><th>With the API</th></tr></thead>
+          <tbody>
+            <tr><td>View, search and print PDFs and images</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>Annotate, sign and fill in forms</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>Open Word, Excel, PowerPoint, HTML, Markdown and text files</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Document tools such as compress, OCR, redact and convert</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Render pages on your server</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Save settings on your server</td><td>No</td><td>Yes</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <br>
+      <ul class="plain">
+        <li><b>Protect the API.</b> It has no login or rate limits, so put it behind your own gateway. <a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/SECURITY.md">Read the security notes</a> before deploying it.</li>
+        <li><b>Viewer settings aren't security controls.</b> Turning off downloads or adding a watermark happens in the browser. To guarantee a watermark, add it on your server with the API.</li>
+        <li><b>Packages install from GitHub for now,</b> as they aren't on npm yet.</li>
+      </ul>
+    </section>
+
+    <div class="final">
+      <h2>Try it, <em>and tell us what's missing.</em></h2>
+      <div class="actions">
+        <a class="btn" href="https://github.com/kartik-ramachandran/PDFSuite">Star it on GitHub</a>
+        <a class="btn ghost" href="https://github.com/kartik-ramachandran/PDFSuite/issues">Report an issue or request a feature</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>PDF Suite is free and open source, under the MIT License.</span>
+    <span><a href="https://github.com/kartik-ramachandran/PDFSuite">GitHub</a><a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/viewer/README.md">Viewer docs</a><a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/LICENSE">License</a><a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/THIRD_PARTY_NOTICES.md">Third-party notices</a></span>
+  </div>
+</footer>
+
+<script>
+// Tabs, using the keyboard pattern people expect: arrow keys move between them.
+document.querySelectorAll('.tabs').forEach((group) => {
+  const tabs = [...group.querySelectorAll(':scope > [role="tablist"] > [role="tab"]')];
+  const select = (tab, focus) => {
+    tabs.forEach((other) => {
+      const active = other === tab;
+      other.setAttribute('aria-selected', String(active));
+      other.tabIndex = active ? 0 : -1;
+      document.getElementById(other.getAttribute('aria-controls')).hidden = !active;
+    });
+    if (focus) tab.focus();
+  };
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => select(tab));
+    tab.addEventListener('keydown', (event) => {
+      const moves = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: tabs.length - 1 };
+      if (!(event.key in moves)) return;
+      event.preventDefault();
+      select(tabs[(moves[event.key] + tabs.length) % tabs.length], true);
+    });
+  });
+});
+
+// A copy button on every code block.
+document.querySelectorAll('.code').forEach((block) => {
+  const button = document.createElement('button');
+  button.className = 'copy';
+  button.type = 'button';
+  button.textContent = 'Copy';
+  button.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(block.querySelector('pre').innerText);
+      button.textContent = 'Copied';
+    } catch {
+      button.textContent = 'Press Ctrl+C';
+    }
+    setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+  });
+  block.append(button);
+});
+</script>
+</body>
+</html>

@@ -30,11 +30,21 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kartik-ramachandran/PDF.git",
+    "url": "git+https://github.com/kartik-ramachandran/PDFSuite.git",
     "directory": "viewer/packages/react"
   },
-  "homepage": "https://github.com/kartik-ramachandran/PDF/tree/main/viewer#readme",
+  "homepage": "https://github.com/kartik-ramachandran/PDFSuite/tree/main/viewer#readme",
   "publishConfig": {
     "access": "public"
+  },
+  "keywords": [
+    "pdf",
+    "pdf-viewer",
+    "react",
+    "react-pdf-viewer",
+    "annotations"
+  ],
+  "bugs": {
+    "url": "https://github.com/kartik-ramachandran/PDFSuite/issues"
   }
 }
