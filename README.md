@@ -1,6 +1,6 @@
 # Document Suite
 
-[![MIT License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Latest release](https://img.shields.io/github/v/release/kartik-ramachandran/DocumentSuite)](https://github.com/kartik-ramachandran/DocumentSuite/releases/latest) [![Live demo](https://img.shields.io/badge/demo-try_it_live-a83f22)](https://kartik-ramachandran.github.io/DocumentSuite/#try)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![npm](https://img.shields.io/npm/v/@document-suite/viewer)](https://www.npmjs.com/package/@document-suite/viewer) [![Latest release](https://img.shields.io/github/v/release/kartik-ramachandran/DocumentSuite)](https://github.com/kartik-ramachandran/DocumentSuite/releases/latest) [![Live demo](https://img.shields.io/badge/demo-try_it_live-a83f22)](https://kartik-ramachandran.github.io/DocumentSuite/#try)
 
 Open-source PDF tools you run yourself: a REST API, an MCP server for AI clients, and a viewer and editor you can embed in React, Vue, Angular or plain JavaScript apps.
 
@@ -92,7 +92,6 @@ Document Suite is free and open for anyone to use, and there's nothing to buy. I
 
 This is an early release, at version 0.2.0.
 
-- **The viewer packages aren't on npm yet.** They [install from the GitHub release](viewer/README.md#1-install-the-packages) for now
 - **The API needs protecting.** Put it behind your own gateway for login and rate limits
 - **Viewer settings shape the interface, and aren't security controls.** Turning off downloads or adding a watermark happens in the browser, so protect sensitive documents on your server
 

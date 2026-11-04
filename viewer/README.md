@@ -36,16 +36,19 @@ This takes a few minutes, and PDFs and images work straight away with no server.
 
 You always need `viewer`, then add `editor` for annotations and forms, and the package for your framework.
 
-The packages aren't on npm yet, so they install from the [GitHub release](https://github.com/kartik-ramachandran/DocumentSuite/releases/latest). Your `package.json` then points at those files, and everything else works as normal.
-
 ```bash
-RELEASE=https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0
+# React
+npm install @document-suite/viewer @document-suite/editor @document-suite/react
 
-# Use document-suite-vue or document-suite-angular for those frameworks. For plain JavaScript, leave off the last file.
-npm install $RELEASE/document-suite-viewer-0.2.0.tgz $RELEASE/document-suite-editor-0.2.0.tgz $RELEASE/document-suite-react-0.2.0.tgz
+# Vue
+npm install @document-suite/viewer @document-suite/editor @document-suite/vue
+
+# Angular
+npm install @document-suite/viewer @document-suite/editor @document-suite/angular
+
+# Plain JavaScript
+npm install @document-suite/viewer @document-suite/editor
 ```
-
-In PowerShell, set it with `$RELEASE="https://..."`, and the `npm install` line works as it is. The commands on the [website](https://kartik-ramachandran.github.io/DocumentSuite/#install) have the addresses written out in full, ready to copy.
 
 | Package | Purpose |
 |---|---|

@@ -298,7 +298,7 @@ export function App() {
         <div role="tabpanel" id="p-react" aria-labelledby="t-react">
           <ol class="steps">
             <li><p><b>Install</b> the packages.</p>
-              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-viewer-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-editor-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-react-0.2.0.tgz</code></pre></div></li>
+              <div class="code"><pre><code>npm install @document-suite/viewer @document-suite/editor @document-suite/react</code></pre></div></li>
             <li><p><b>Render</b> your files.</p>
               <div class="code"><pre><code>import { createEditorPlugin } from '@document-suite/editor';
 import { FileList, type FileItem } from '@document-suite/react';
@@ -321,7 +321,7 @@ export function App() {
         <div role="tabpanel" id="p-vue" aria-labelledby="t-vue" hidden>
           <ol class="steps">
             <li><p><b>Install</b> the packages.</p>
-              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-viewer-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-editor-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-vue-0.2.0.tgz</code></pre></div></li>
+              <div class="code"><pre><code>npm install @document-suite/viewer @document-suite/editor @document-suite/vue</code></pre></div></li>
             <li><p><b>Render</b> your files.</p>
               <div class="code"><pre><code>&lt;script setup lang="ts"&gt;
 import { createEditorPlugin } from '@document-suite/editor';
@@ -347,7 +347,7 @@ const options = markRaw({ viewer: { plugins: [createEditorPlugin()] } });
         <div role="tabpanel" id="p-angular" aria-labelledby="t-angular" hidden>
           <ol class="steps">
             <li><p><b>Install</b> the packages.</p>
-              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-viewer-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-editor-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-angular-0.2.0.tgz</code></pre></div></li>
+              <div class="code"><pre><code>npm install @document-suite/viewer @document-suite/editor @document-suite/angular</code></pre></div></li>
             <li><p><b>Render</b> your files.</p>
               <div class="code"><pre><code>import { Component } from '@angular/core';
 import { createEditorPlugin } from '@document-suite/editor';
@@ -373,7 +373,7 @@ export class AppComponent {
         <div role="tabpanel" id="p-js" aria-labelledby="t-js" hidden>
           <ol class="steps">
             <li><p><b>Install</b> the packages.</p>
-              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-viewer-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-editor-0.2.0.tgz</code></pre></div></li>
+              <div class="code"><pre><code>npm install @document-suite/viewer @document-suite/editor</code></pre></div></li>
             <li><p><b>Render</b> your files, with any bundler.</p>
               <div class="code"><pre><code>import { createFileList } from '@document-suite/viewer';
 import { createEditorPlugin } from '@document-suite/editor';
@@ -518,7 +518,6 @@ await loadViewerSettings({
       <ul class="plain">
         <li><b>Protect the API.</b> It has no login or rate limits, so put it behind your own gateway. <a href="https://github.com/kartik-ramachandran/DocumentSuite/blob/main/SECURITY.md">Read the security notes</a> before deploying it.</li>
         <li><b>Viewer settings aren't security controls.</b> Turning off downloads or adding a watermark happens in the browser. To guarantee a watermark, add it on your server with the API.</li>
-        <li><b>Packages install from GitHub for now,</b> as they aren't on npm yet.</li>
       </ul>
     </section>
 

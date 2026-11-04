@@ -58,3 +58,14 @@ From the `viewer` folder:
 | `npm run site` | Builds the website and its live demo in `_site` |
 | `npm run site:deploy` | Publishes `_site` to the `gh-pages` branch |
 | `npm run screenshots` | Retakes the screenshots in `docs/screenshots` |
+
+To publish a new version to npm, raise the version in each package, run `npm run build`, then publish in this order, because the later packages depend on the earlier ones:
+
+```bash
+npm publish --access public -w @document-suite/viewer
+npm publish --access public -w @document-suite/editor
+npm publish --access public -w @document-suite/react
+npm publish --access public -w @document-suite/vue
+cd packages/angular/dist
+npm publish --access public
+```
