@@ -1,5 +1,7 @@
 import { ICONS } from './icons';
+import { askFileName } from './rename-dialog';
 import { ServiceClient } from './service';
+import { resolveSettings, type PdfSuiteSettings } from './settings';
 import type { ImageView } from './image-view';
 import { bytesToBase64, detectImage, isPdf, loadSource, nameForType, type LoadedSource } from './sources';
 import { VIEWER_CSS } from './styles';
@@ -56,6 +58,8 @@ type Listener<K extends keyof ViewerEvents> = (event: ViewerEvents[K]) => void;
 
 /** The viewer. Attach it to any element with createViewer, or use the framework wrappers. */
 export class PdfViewer {
+  /** The settings in effect. They're read when the viewer is created. */
+  readonly settings: PdfSuiteSettings;
   private readonly shadow: ShadowRoot;
   private readonly listeners = new Map<keyof ViewerEvents, Set<Listener<never>>>();
   private readonly service: ServiceClient;
@@ -65,6 +69,10 @@ export class PdfViewer {
   private readonly imageHost: HTMLElement;
   private imageSize: PageSize = { width: 0, height: 0 };
   private currentPanel = 'pages';
+  private unsaved = false;
+  /** The file as uploaded, when it had to be converted to PDF for viewing. */
+  private originalFile: LoadedSource | null = null;
+  private lastHeight = 0;
   private readonly controls: Record<string, HTMLElement> = {};
   private readonly textCache = new Map<number, TextRun[]>();
   private readonly mainGroup: HTMLElement;
@@ -111,9 +119,17 @@ export class PdfViewer {
   ) {
     this.shadow = host.shadowRoot ?? host.attachShadow({ mode: 'open' });
     this.shadow.replaceChildren();
-    this.zoomSetting = options.initialZoom ?? 'fit-width';
+    this.settings = resolveSettings(options.settings, {
+      theme: options.theme,
+      mode: options.mode,
+      initialZoom: options.initialZoom,
+      sidebarOpen: options.sidebarOpen,
+      allowOpen: options.allowOpen,
+      allowRename: options.allowRename,
+    });
+    this.zoomSetting = this.settings.initialZoom;
     this.service = new ServiceClient(options.serviceUrl, options.serviceHeaders, options.serviceTransport);
-    this.applyTheme(options.theme ?? 'auto');
+    this.applyTheme(this.settings.theme);
     this.addStyles(VIEWER_CSS);
 
     this.root = element('div', 'pv-root');
@@ -155,7 +171,7 @@ export class PdfViewer {
     this.shadow.append(this.root);
 
     this.addPanel({ id: 'pages', label: 'Pages', icon: ICONS.sidebar, element: this.thumbnails });
-    if (options.sidebarOpen) this.toggleSidebar(true);
+    if (this.settings.sidebarOpen) this.toggleSidebar(true);
 
     this.root.addEventListener('keydown', (event) => this.handleKey(event));
     this.resizeObserver = new ResizeObserver(() => this.handleResize());
@@ -171,6 +187,16 @@ export class PdfViewer {
   get pageCount(): number {
     return this.imageView ? 1 : (this.engine?.pageCount ?? 0);
   }
+  /** True when the document has changed since it was opened, downloaded or marked as saved. */
+  get hasUnsavedChanges(): boolean {
+    return this.unsaved;
+  }
+
+  /** Tells the viewer that your app has saved the document, for example after sending getBytes() to your server. */
+  markSaved(): void {
+    this.unsaved = false;
+  }
+
   /** What's currently open, or null if nothing is. */
   get kind(): DocumentKind | null {
     return this.imageView ? 'image' : this.engine ? 'pdf' : null;
@@ -211,7 +237,9 @@ export class PdfViewer {
         return;
       }
 
+      let original: LoadedSource | null = null;
       if (!isPdf(loaded)) {
+        original = loaded;
         if (!this.service.isConfigured) throw new Error(`Opening ${loaded.name} needs a PDF service. Set the serviceUrl option.`);
         this.showOverlay('Converting document…');
         loaded = { bytes: await this.service.convertToPdf(loaded.bytes, loaded.name), name: loaded.name.replace(/\.[^.]+$/, '') + '.pdf' };
@@ -225,6 +253,7 @@ export class PdfViewer {
       }
 
       this.closeDocument();
+      this.originalFile = original;
       this.engine = engine;
       this.documentName = loaded.name;
       this.root.dataset.kind = 'pdf';
@@ -302,20 +331,42 @@ export class PdfViewer {
     return bytesToBase64(await this.getBytes());
   }
 
-  async download(fileName?: string): Promise<void> {
+  /**
+   * Downloads the document under its uploaded name. An untouched Office or text file downloads as the original file,
+   * and a changed one as a PDF with the same name. With allowRename, the user is asked for a name first, unless you
+   * pass one. Returns false if they cancel.
+   */
+  async download(fileName?: string): Promise<boolean> {
     try {
-      const bytes = await this.getBytes();
+      const useOriginal = this.originalFile !== null && !this.unsaved;
       const isImage = this.kind === 'image';
-      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: isImage ? 'application/octet-stream' : 'application/pdf' }));
-      const link = document.createElement('a');
-      link.href = url;
-      const imageName = this.isImageEdited() ? nameForType(this.documentName, 'image/png') : this.documentName;
-      link.download = fileName ?? (isImage ? imageName : this.documentName.replace(/\.[^.]+$/, '') + '.pdf');
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      const bytes = useOriginal ? this.originalFile!.bytes : await this.getBytes();
+      const defaultName = useOriginal ? this.originalFile!.name : isImage && this.isImageEdited() ? nameForType(this.documentName, 'image/png') : isImage ? this.documentName : pdfFileName(this.documentName);
+      const saved = await this.saveFile(bytes, fileName ?? defaultName, isImage || useOriginal ? 'application/octet-stream' : 'application/pdf', fileName === undefined);
+      if (saved === null) return false;
+      if (useOriginal) this.originalFile = { ...this.originalFile!, name: saved };
+      else this.documentName = saved;
+      this.unsaved = false;
+      return true;
     } catch (error) {
       this.notify(toError(error).message, 'error');
+      return false;
     }
+  }
+
+  /** Saves a file to the user's device, asking for a name first if allowRename is on. Returns the name used, or null if cancelled. */
+  async saveFile(bytes: Uint8Array, fileName: string, contentType = 'application/octet-stream', mayAsk = true): Promise<string | null> {
+    const name = this.settings.allowRename && mayAsk ? await askFileName(fileName, this.host.dataset.theme === 'dark' ? 'dark' : 'light') : fileName;
+    if (name === null) return null;
+
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: contentType }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    this.emit('downloaded', { fileName: name });
+    return name;
   }
 
   async print(): Promise<void> {
@@ -472,12 +523,16 @@ export class PdfViewer {
     const context: ViewerContext = {
       viewer: this,
       root: this.shadow,
+      settings: this.settings,
       addStyles: (css) => this.addStyles(css),
       addToolbarButton: (button) => this.addPluginButton(button),
       addSidebarPanel: (panel) => this.addPanel(panel),
       addExportStep: (step) => this.exportSteps.push(step),
       addPrintPainter: (painter) => this.printPainters.push(painter),
       addImageChangeCheck: (check) => this.imageChangeChecks.push(check),
+      markChanged: () => {
+        this.unsaved = true;
+      },
       getPdfJsDocument: () => (this.engine && 'document' in this.engine ? (this.engine as { document: unknown }).document : null),
       hasService: this.service.isConfigured,
       callService: (path, body) => this.service.callJson(path, body),
@@ -593,16 +648,20 @@ export class PdfViewer {
       button.dataset.imageOnly = '';
       return button;
     };
+    const rotateButton = iconButton('Rotate view', ICONS.rotate, () => this.rotateView());
+    const rotateLeftButton = imageButton('Rotate left', ICONS.rotateLeft, (image) => image.rotate(-90));
+    rotateButton.hidden = !this.settings.allowRotate;
+    rotateLeftButton.hidden = !this.settings.allowRotate;
     view.append(
-      iconButton('Rotate view', ICONS.rotate, () => this.rotateView()),
-      imageButton('Rotate left', ICONS.rotateLeft, (image) => image.rotate(-90)),
+      rotateButton,
+      rotateLeftButton,
       imageButton('Flip horizontally', ICONS.flipHorizontal, (image) => image.flip('horizontal')),
       imageButton('Flip vertically', ICONS.flipVertical, (image) => image.flip('vertical')),
       imageButton('Actual size', ICONS.actualSize, (image) => image.zoomTo(1)),
     );
 
     const actions = element('div', 'pv-group');
-    if (this.options.allowOpen !== false) {
+    if (this.settings.allowOpen) {
       const fileInput = element('input', 'pv-file-input') as HTMLInputElement;
       fileInput.type = 'file';
       fileInput.accept = '.pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.html,.htm,.md,.txt,.png,.jpg,.jpeg,.gif,.webp,.bmp,.svg,.avif,.ico';
@@ -616,11 +675,12 @@ export class PdfViewer {
     }
     const searchButton = iconButton('Search', ICONS.search, () => this.toggleSearch());
     searchButton.dataset.pdfOnly = '';
-    actions.append(
-      searchButton,
-      iconButton('Print', ICONS.print, () => void this.print()),
-      iconButton('Download', ICONS.download, () => void this.download()),
-    );
+    searchButton.hidden = !this.settings.allowSearch;
+    const printButton = iconButton('Print', ICONS.print, () => void this.print());
+    printButton.hidden = !this.settings.allowPrint;
+    const downloadButton = iconButton('Download', ICONS.download, () => void this.download());
+    downloadButton.hidden = !this.settings.allowDownload;
+    actions.append(searchButton, printButton, downloadButton);
 
     toolbar.append(navigation, zoom, view, this.pluginGroup, this.mainGroup, actions);
   }
@@ -644,7 +704,12 @@ export class PdfViewer {
         if (event.shiftKey) this.previousMatch();
         else this.nextMatch();
       }
-      if (event.key === 'Escape') this.toggleSearch(false);
+      if (event.key === 'Escape') {
+        // Only closes search, not a modal around the viewer.
+        event.preventDefault();
+        event.stopPropagation();
+        this.toggleSearch(false);
+      }
     });
     this.controls.searchInput = input;
     this.controls.searchCount = count;
@@ -682,7 +747,7 @@ export class PdfViewer {
   private handleKey(event: KeyboardEvent): void {
     const target = event.composedPath()[0] as HTMLElement;
     const isTyping = target.matches?.('input, textarea, select, [contenteditable]');
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+    if (this.settings.allowSearch && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
       event.preventDefault();
       this.toggleSearch(true);
       return;
@@ -719,7 +784,7 @@ export class PdfViewer {
   // ── Documents and pages ────────────────────────────────────────────
 
   private async openEngine(bytes: Uint8Array, name: string): Promise<DocumentEngine> {
-    if (this.options.mode === 'server') {
+    if (this.settings.mode === 'server') {
       if (!this.service.isConfigured) throw new Error('Server mode needs the serviceUrl option.');
       const { ServerEngine } = await import('./engines/server-engine');
       return ServerEngine.open(bytes, name, this.service);
@@ -768,6 +833,8 @@ export class PdfViewer {
   }
 
   private closeDocument(): void {
+    this.unsaved = false;
+    this.originalFile = null;
     this.imageView?.destroy();
     this.imageView = null;
     this.imageBytes = null;
@@ -856,11 +923,16 @@ export class PdfViewer {
       return;
     }
 
+    // Keeps the same spot on the page in view, instead of jumping to the page's top, which would make resizing jittery.
     const keepPage = this.currentPage;
+    const keepView = this.pageViews[keepPage - 1];
+    const keepTop = keepView.element.offsetTop - this.pagesHost.offsetTop;
+    const keepFraction = keepView.element.offsetHeight > 0 && !force ? (this.scroller.scrollTop - keepTop) / keepView.element.offsetHeight : 0;
     this.scale = scale;
     for (const view of this.pageViews) this.layoutPage(view);
     this.syncZoomControl();
-    this.goToPage(keepPage);
+    this.scroller.scrollTop = keepView.element.offsetTop - this.pagesHost.offsetTop + keepFraction * keepView.element.offsetHeight;
+    this.setCurrentPage(keepPage);
     this.emit('zoomChanged', { scale });
 
     // While zooming, canvases are stretched by CSS, then re-rendered sharply once it settles.
@@ -1064,8 +1136,11 @@ export class PdfViewer {
     }
 
     const width = this.scroller.clientWidth;
-    if (width === this.lastWidth) return;
+    const height = this.scroller.clientHeight;
+    const heightMatters = this.zoomSetting === 'fit-page' && height !== this.lastHeight;
+    if (width === this.lastWidth && !heightMatters) return;
     this.lastWidth = width;
+    this.lastHeight = height;
     if (typeof this.zoomSetting !== 'number') this.applyZoom();
   }
 
@@ -1207,6 +1282,10 @@ function iconButton(label: string, icon: string, onClick: () => void): HTMLButto
   button.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg>`;
   button.addEventListener('click', onClick);
   return button;
+}
+
+function pdfFileName(name: string): string {
+  return /\.pdf$/i.test(name) ? name : `${name.replace(/\.[^.]+$/, '')}.pdf`;
 }
 
 function clamp(value: number, min: number, max: number): number {

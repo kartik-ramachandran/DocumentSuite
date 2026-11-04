@@ -9,7 +9,7 @@ export const SERVICE = 'http://localhost:8080';
 export const fixture = (name: string) => join(FIXTURES, name);
 
 export function demoUrl(options: Record<string, string> = {}): string {
-  return `/?${new URLSearchParams(options)}`;
+  return `/?${new URLSearchParams({ view: 'viewer', ...options })}`;
 }
 
 export async function openDemo(page: Page, url = demoUrl()): Promise<void> {

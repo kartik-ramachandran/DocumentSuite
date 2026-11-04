@@ -31,26 +31,26 @@ public class PdfToolsController : PdfBaseController
     /// <summary>Converts a PDF, Office, HTML, Markdown, text or image file to PDF, based on its file name.</summary>
     [HttpPost("any-to-pdf")]
     public Task<IActionResult> ToPdf(IFormFile file) => Run(async () =>
-        File(await _pdf.ConvertAnyToPdf(file.FileName, await ReadBytes(file), HttpContext.RequestAborted), PdfType, "converted.pdf"));
+        File(await _pdf.ConvertAnyToPdf(file.FileName, await ReadBytes(file), HttpContext.RequestAborted), PdfType, OutputName(file, ".pdf")));
 
     [HttpPost("organize")]
     public Task<IActionResult> Organize(IFormFile file, [FromForm] string? pages) => Run(async () =>
-        File(_toolkit.OrganizePages(await ReadBytes(file), pages), PdfType, "organized.pdf"));
+        File(_toolkit.OrganizePages(await ReadBytes(file), pages), PdfType, OutputName(file, ".pdf")));
 
     [HttpPost("remove-pages")]
     public Task<IActionResult> RemovePages(IFormFile file, [FromForm] string? pages) => Run(async () =>
-        File(_toolkit.RemovePages(await ReadBytes(file), pages), PdfType, "pages_removed.pdf"));
+        File(_toolkit.RemovePages(await ReadBytes(file), pages), PdfType, OutputName(file, ".pdf")));
 
     [HttpPost("split/ranges")]
     public Task<IActionResult> SplitRanges(IFormFile file, [FromForm] string? ranges = null, [FromForm] int? everyPages = null) => Run(async () =>
-        File(_toolkit.SplitIntoFiles(await ReadBytes(file), ranges, everyPages), ZipType, "split.zip"));
+        File(_toolkit.SplitIntoFiles(await ReadBytes(file), ranges, everyPages), ZipType, OutputName(file, ".zip")));
 
     [HttpPost("searchable")]
     public Task<IActionResult> Searchable(IFormFile file) => Run(async () =>
     {
         var result = await _toolkit.MakeSearchableAsync(await ReadBytes(file), HttpContext.RequestAborted);
         Response.Headers["X-Ocr-Page-Count"] = result.OcrPages.ToString();
-        return File(result.Pdf, PdfType, "searchable.pdf");
+        return File(result.Pdf, PdfType, OutputName(file, ".pdf"));
     });
 
     [HttpPost("redact")]
@@ -59,7 +59,7 @@ public class PdfToolsController : PdfBaseController
         var result = await _toolkit.RedactAsync(await ReadBytes(file), terms, matchCase, HttpContext.RequestAborted);
         Response.Headers["X-Redacted-Word-Count"] = result.RedactedWords.ToString();
         Response.Headers["X-Redacted-Page-Count"] = result.RedactedPages.ToString();
-        return File(result.Pdf, PdfType, "redacted.pdf");
+        return File(result.Pdf, PdfType, OutputName(file, ".pdf"));
     });
 
     [HttpPost("metadata")]
@@ -74,11 +74,11 @@ public class PdfToolsController : PdfBaseController
         [FromForm] string? subject = null,
         [FromForm] string? keywords = null,
         [FromForm] bool clear = false) => Run(async () =>
-        File(_toolkit.UpdateMetadata(await ReadBytes(file), title, author, subject, keywords, clear), PdfType, "metadata.pdf"));
+        File(_toolkit.UpdateMetadata(await ReadBytes(file), title, author, subject, keywords, clear), PdfType, OutputName(file, ".pdf")));
 
     [HttpPost("extract-images")]
     public Task<IActionResult> ExtractImages(IFormFile file) => Run(async () =>
-        File(_toolkit.ExtractImages(await ReadBytes(file)), ZipType, "images.zip"));
+        File(_toolkit.ExtractImages(await ReadBytes(file)), ZipType, OutputName(file, ".zip")));
 
     [HttpPost("stamp-image")]
     public Task<IActionResult> StampImage(
@@ -88,7 +88,7 @@ public class PdfToolsController : PdfBaseController
         [FromForm] double y,
         [FromForm] double width,
         [FromForm] string? pages = null) => Run(async () =>
-        File(_toolkit.StampImage(await ReadBytes(file), await ReadBytes(image), x, y, width, pages), PdfType, "stamped.pdf"));
+        File(_toolkit.StampImage(await ReadBytes(file), await ReadBytes(image), x, y, width, pages), PdfType, OutputName(file, ".pdf")));
 
     [HttpPost("crop")]
     public Task<IActionResult> Crop(
@@ -98,7 +98,7 @@ public class PdfToolsController : PdfBaseController
         [FromForm] double top = 0,
         [FromForm] double bottom = 0,
         [FromForm] string? pages = null) => Run(async () =>
-        File(_toolkit.CropPages(await ReadBytes(file), left, right, top, bottom, pages), PdfType, "cropped.pdf"));
+        File(_toolkit.CropPages(await ReadBytes(file), left, right, top, bottom, pages), PdfType, OutputName(file, ".pdf")));
 
     [HttpPost("forms")]
     public Task<IActionResult> Forms(IFormFile file) => Run(async () =>
@@ -111,7 +111,7 @@ public class PdfToolsController : PdfBaseController
         var parsed = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(values)
             ?? throw new ArgumentException("values must be a JSON object of field names and values.");
         var fields = parsed.ToDictionary(entry => entry.Key, entry => entry.Value.ValueKind == JsonValueKind.String ? entry.Value.GetString()! : entry.Value.GetRawText());
-        return File(await _toolkit.FillFormAsync(await ReadBytes(file), fields, flatten, HttpContext.RequestAborted), PdfType, "filled.pdf");
+        return File(await _toolkit.FillFormAsync(await ReadBytes(file), fields, flatten, HttpContext.RequestAborted), PdfType, OutputName(file, ".pdf"));
     });
 
     private async Task<IActionResult> Run(Func<Task<IActionResult>> action)

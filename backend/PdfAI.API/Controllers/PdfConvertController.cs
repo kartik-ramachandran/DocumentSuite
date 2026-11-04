@@ -25,7 +25,7 @@ public class PdfConvertController : PdfBaseController
         try
         {
             var result = await _pdfService.ConvertPdfToWord(await ReadBytes(file), HttpContext.RequestAborted);
-            return File(result, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "converted.docx");
+            return File(result, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", OutputName(file, ".docx"));
         }
         catch (Exception ex)
         {
@@ -40,7 +40,7 @@ public class PdfConvertController : PdfBaseController
         try
         {
             var result = await _pdfService.ConvertPdfToExcel(await ReadBytes(file), HttpContext.RequestAborted);
-            return File(result, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "converted.xlsx");
+            return File(result, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", OutputName(file, ".xlsx"));
         }
         catch (Exception ex)
         {
@@ -55,7 +55,7 @@ public class PdfConvertController : PdfBaseController
         try
         {
             var result = await _pdfService.ConvertPdfToPowerPoint(await ReadBytes(file), HttpContext.RequestAborted);
-            return File(result, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "converted.pptx");
+            return File(result, "application/vnd.openxmlformats-officedocument.presentationml.presentation", OutputName(file, ".pptx"));
         }
         catch (Exception ex)
         {
@@ -80,9 +80,9 @@ public class PdfConvertController : PdfBaseController
 
             var results = await _pdfService.ConvertPdfToImages(await ReadBytes(file), extension, dpi, HttpContext.RequestAborted);
             if (results.Count == 1)
-                return File(results[0], extension == "png" ? "image/png" : "image/jpeg", $"page_1.{extension}");
+                return File(results[0], extension == "png" ? "image/png" : "image/jpeg", OutputName(file, $".{extension}"));
 
-            return File(ImageArchive.Create(results, extension), "application/zip", "pages.zip");
+            return File(ImageArchive.Create(results, extension), "application/zip", OutputName(file, ".zip"));
         }
         catch (Exception ex)
         {
@@ -97,7 +97,7 @@ public class PdfConvertController : PdfBaseController
         try
         {
             var result = _pdfService.ConvertPdfToHtml(await ReadBytes(file));
-            return File(result, "text/html; charset=utf-8", "converted.html");
+            return File(result, "text/html; charset=utf-8", OutputName(file, ".html"));
         }
         catch (Exception ex)
         {
@@ -112,7 +112,7 @@ public class PdfConvertController : PdfBaseController
         try
         {
             var result = _pdfService.ConvertPdfToMarkdown(await ReadBytes(file));
-            return File(result, "text/markdown; charset=utf-8", "converted.md");
+            return File(result, "text/markdown; charset=utf-8", OutputName(file, ".md"));
         }
         catch (Exception ex)
         {
@@ -127,7 +127,7 @@ public class PdfConvertController : PdfBaseController
         try
         {
             var result = _pdfService.ConvertPdfToText(await ReadBytes(file));
-            return File(result, "text/plain; charset=utf-8", "converted.txt");
+            return File(result, "text/plain; charset=utf-8", OutputName(file, ".txt"));
         }
         catch (Exception ex)
         {

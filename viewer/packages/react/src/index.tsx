@@ -55,4 +55,10 @@ export const PdfViewer = forwardRef<ViewerInstance | null, PdfViewerProps>(funct
   return <div ref={host} className={className} style={{ height: '100%', ...style }} />;
 });
 
+export { FileList, PdfViewerModal, SettingsPanel } from './modal';
+export type { FileListProps, PdfViewerModalProps, SettingsPanelProps } from './modal';
+export { configureViewer, DEFAULT_SETTINGS, getViewerSettings, resetViewerSettings, SETTINGS_SCHEMA } from '@pdf-suite/viewer';
+export type { PdfSuiteSettings, SettingsPanelOptions } from '@pdf-suite/viewer';
+export { openContextMenu, openViewerModal } from '@pdf-suite/viewer';
+export type { ContextMenuItem, FileItem, FileListOptions, FileMenuItem, ViewerModal, ViewerModalOptions } from '@pdf-suite/viewer';
 export type { DocumentSource, PdfViewer as PdfViewerInstance, ViewerEvents, ViewerOptions, ZoomValue } from '@pdf-suite/viewer';

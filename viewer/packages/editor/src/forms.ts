@@ -104,6 +104,7 @@ export class FormController {
     const store = (value: Record<string, unknown>) => {
       document.annotationStorage.setValue(widget.id, value);
       this.isDirty = true;
+      this.context.markChanged();
     };
 
     if (widget.fieldType === 'Tx') {

@@ -6,7 +6,7 @@ import { ToolsController } from './tools';
 export type { Annotation, AnnotationTool, Point, Rect } from './annotation-types';
 
 export interface EditorPluginOptions {
-  /** Enable the document tools panel, which needs the viewer's serviceUrl. Defaults to true. */
+  /** Set to false to leave out the document tools, whatever the documentTools setting says. */
   tools?: boolean;
 }
 
@@ -27,22 +27,28 @@ export function createEditorPlugin(options: EditorPluginOptions = {}): EditorPlu
     },
 
     install(context: ViewerContext) {
-      forms = new FormController(context);
-      forms.install();
+      const { settings } = context;
+      if (settings.formFilling) {
+        forms = new FormController(context);
+        forms.install();
+      }
 
-      annotations = new AnnotationController(context);
-      annotations.install();
+      if (settings.annotations) {
+        const controller = new AnnotationController(context);
+        annotations = controller;
+        controller.install();
+        context.addExportStep(async (bytes) => {
+          const items = controller.getAnnotations();
+          if (items.length === 0) return bytes;
+          // The PDF writer is large, so it's only loaded when there's something to write.
+          const { writeAnnotations } = await import('./pdf-export');
+          return writeAnnotations(bytes, items);
+        });
+      } else {
+        annotations = null;
+      }
 
-      const controller = annotations;
-      context.addExportStep(async (bytes) => {
-        const items = controller.getAnnotations();
-        if (items.length === 0) return bytes;
-        // The PDF writer is large, so it's only loaded when there's something to write.
-        const { writeAnnotations } = await import('./pdf-export');
-        return writeAnnotations(bytes, items);
-      });
-
-      if (options.tools !== false) new ToolsController(context, context.hasService).install();
+      if (options.tools !== false && settings.documentTools) new ToolsController(context, context.hasService).install();
     },
 
     destroy() {

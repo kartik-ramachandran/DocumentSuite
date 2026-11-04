@@ -23,7 +23,7 @@ public class PdfGenerateController : PdfBaseController
         {
             var result = await ConvertFilesToPdf(files,
                 async f => await _pdfService.ConvertWordToPdf(await ReadBytes(f), Path.GetExtension(f.FileName), HttpContext.RequestAborted));
-            return File(result, "application/pdf", files.Count > 1 ? "converted-merged.pdf" : "converted.pdf");
+            return File(result, "application/pdf", CombinedName(files));
         }
         catch (Exception ex)
         {
@@ -40,7 +40,7 @@ public class PdfGenerateController : PdfBaseController
         {
             var result = await ConvertFilesToPdf(files,
                 async f => await _pdfService.ConvertExcelToPdf(await ReadBytes(f), Path.GetExtension(f.FileName), HttpContext.RequestAborted));
-            return File(result, "application/pdf", files.Count > 1 ? "converted-merged.pdf" : "converted.pdf");
+            return File(result, "application/pdf", CombinedName(files));
         }
         catch (Exception ex)
         {
@@ -57,7 +57,7 @@ public class PdfGenerateController : PdfBaseController
         {
             var result = await ConvertFilesToPdf(files,
                 async f => await _pdfService.ConvertPowerPointToPdf(await ReadBytes(f), Path.GetExtension(f.FileName), HttpContext.RequestAborted));
-            return File(result, "application/pdf", files.Count > 1 ? "converted-merged.pdf" : "converted.pdf");
+            return File(result, "application/pdf", CombinedName(files));
         }
         catch (Exception ex)
         {
@@ -74,7 +74,7 @@ public class PdfGenerateController : PdfBaseController
         {
             var result = await ConvertFilesToPdf(files,
                 async f => _pdfService.ConvertHtmlToPdf(await ReadBytes(f)));
-            return File(result, "application/pdf", files.Count > 1 ? "converted-merged.pdf" : "converted.pdf");
+            return File(result, "application/pdf", CombinedName(files));
         }
         catch (Exception ex)
         {
@@ -91,7 +91,7 @@ public class PdfGenerateController : PdfBaseController
         {
             var result = await ConvertFilesToPdf(files,
                 async f => _pdfService.ConvertMarkdownToPdf(await ReadBytes(f)));
-            return File(result, "application/pdf", files.Count > 1 ? "converted-merged.pdf" : "converted.pdf");
+            return File(result, "application/pdf", CombinedName(files));
         }
         catch (Exception ex)
         {
@@ -108,7 +108,7 @@ public class PdfGenerateController : PdfBaseController
         {
             var result = await ConvertFilesToPdf(files,
                 async f => _pdfService.ConvertTextToPdf(await ReadBytes(f)));
-            return File(result, "application/pdf", files.Count > 1 ? "converted-merged.pdf" : "converted.pdf");
+            return File(result, "application/pdf", CombinedName(files));
         }
         catch (Exception ex)
         {
@@ -128,7 +128,7 @@ public class PdfGenerateController : PdfBaseController
                 imageBytes.Add(await ReadBytes(file));
 
             var result = _pdfService.ConvertImagesToPdf(imageBytes);
-            return File(result, "application/pdf", "images.pdf");
+            return File(result, "application/pdf", CombinedName(files));
         }
         catch (Exception ex)
         {
@@ -136,6 +136,9 @@ public class PdfGenerateController : PdfBaseController
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    // Several files have no single name to keep, so the result says what it is.
+    private static string CombinedName(List<IFormFile> files) => files.Count > 1 ? "merged.pdf" : OutputName(files.FirstOrDefault(), ".pdf");
 
     private async Task<byte[]> ConvertFilesToPdf(List<IFormFile> files, Func<IFormFile, Task<byte[]>> convert)
     {

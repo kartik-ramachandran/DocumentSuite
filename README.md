@@ -130,6 +130,8 @@ All endpoints accept `multipart/form-data` unless noted.
 | POST | `/api/pdf/validate` | Validate an operation outcome against original and output files |
 | POST | `/api/pdf/review` | AI document review — **disabled by default**, see below |
 
+Results are named after the uploaded file, so `report.docx` comes back as `report.pdf`. Combining several files returns `merged.pdf`.
+
 Swagger UI is available at `/swagger` when the API is running.
 
 ## Calling the API

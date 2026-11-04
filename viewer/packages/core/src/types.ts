@@ -1,3 +1,4 @@
+import type { PdfSuiteSettings } from './settings';
 import type { PdfViewer } from './viewer';
 
 /** A document to open. Base64 strings can also be data URLs. */
@@ -18,6 +19,8 @@ export type DocumentKind = 'pdf' | 'image';
 
 export interface ViewerOptions {
   source?: DocumentSource;
+  /** Settings for this viewer, on top of the app-wide ones from configureViewer. */
+  settings?: Partial<PdfSuiteSettings>;
   /** File name used for downloads, and to detect non-PDF documents. */
   fileName?: string;
   /** client renders in the browser. server has your API render pages. Defaults to client. */
@@ -38,6 +41,8 @@ export interface ViewerOptions {
   /** Shows a button for opening local files. Defaults to true. */
   allowOpen?: boolean;
   plugins?: ViewerPlugin[];
+  /** Asks what to call a file before downloading it, starting from its uploaded name. Defaults to false. */
+  allowRename?: boolean;
   /** Asks for a PDF's password. By default the viewer shows its own prompt. */
   onPassword?: (retry: boolean) => Promise<string | null>;
 }
@@ -73,6 +78,8 @@ export interface SearchMatch {
 export interface ViewerEvents {
   documentLoaded: { pageCount: number; fileName: string; kind: DocumentKind };
   documentError: { error: Error };
+  /** A file was downloaded, with the name it was saved under. */
+  downloaded: { fileName: string };
   pageChanged: { pageNumber: number };
   zoomChanged: { scale: number };
   rotationChanged: { rotation: ViewRotation };
@@ -118,8 +125,12 @@ export interface ViewerContext {
   addImageChangeCheck(check: () => boolean): void;
   /** The raw PDF.js document in client mode, otherwise null. */
   getPdfJsDocument(): unknown;
+  /** The settings in effect for this viewer. */
+  readonly settings: PdfSuiteSettings;
   /** True when the serviceUrl option is set. */
   readonly hasService: boolean;
+  /** Records that the document has changed since it was opened or last saved. */
+  markChanged(): void;
   /** Calls the PDF API. Throws if serviceUrl isn't set or the API returns an error. */
   callService(path: string, body: Record<string, unknown>): Promise<ServiceResult>;
   /** Shows a short message to the user. */

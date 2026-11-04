@@ -12,6 +12,7 @@
     "@pdf-suite/react": "*",
     "@pdf-suite/viewer": "*",
     "@pdf-suite/editor": "*",
+    "pdf-lib": "1.17.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

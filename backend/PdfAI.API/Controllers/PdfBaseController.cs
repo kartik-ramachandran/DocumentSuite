@@ -11,6 +11,15 @@ public abstract class PdfBaseController : ControllerBase
 {
     private const int MaxPagesInRange = 100_000;
 
+    /// <summary>Names a result after the uploaded file, so "report.docx" comes back as "report.pdf".</summary>
+    protected static string OutputName(IFormFile? file, string extension, string fallback = "document")
+    {
+        // Browsers can send a full path, and it may use either kind of slash whatever this server runs on.
+        var uploaded = file?.FileName.Replace('\\', '/') ?? string.Empty;
+        var baseName = Path.GetFileNameWithoutExtension(uploaded[(uploaded.LastIndexOf('/') + 1)..]);
+        return $"{(string.IsNullOrWhiteSpace(baseName) ? fallback : baseName)}{extension}";
+    }
+
     protected static async Task<byte[]> ReadBytes(IFormFile file)
     {
         using var stream = new MemoryStream();

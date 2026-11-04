@@ -22,7 +22,7 @@ public class JsonApiTests : IClassFixture<WebApplicationFactory<Program>>
         var (status, json) = await Post("text-to-pdf", new { files = new[] { TextFile("hello from json") } });
 
         status.Should().Be(HttpStatusCode.OK);
-        json.GetProperty("fileName").GetString().Should().Be("converted.pdf");
+        json.GetProperty("fileName").GetString().Should().Be("note.pdf");
         json.GetProperty("contentType").GetString().Should().Be("application/pdf");
         var pdf = Convert.FromBase64String(json.GetProperty("data").GetString()!);
         Encoding.ASCII.GetString(pdf, 0, 4).Should().Be("%PDF");
@@ -37,7 +37,7 @@ public class JsonApiTests : IClassFixture<WebApplicationFactory<Program>>
         var (status, json) = await Post("rotate", new { file = new { name = "a.pdf", data = pdf }, degrees = 180 });
 
         status.Should().Be(HttpStatusCode.OK);
-        json.GetProperty("fileName").GetString().Should().Be("rotated.pdf");
+        json.GetProperty("fileName").GetString().Should().Be("a.pdf");
     }
 
     [Fact]
@@ -168,6 +168,31 @@ public class JsonApiTests : IClassFixture<WebApplicationFactory<Program>>
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Headers.GetValues("Access-Control-Allow-Origin").Should().Contain("*");
+    }
+
+    [Theory]
+    [InlineData("report.docx", "report.pdf")]
+    [InlineData("Q3 v2.1 FINAL.txt", "Q3 v2.1 FINAL.pdf")]
+    [InlineData("C:\\Users\\me\\notes.txt", "notes.pdf")]
+    [InlineData("../../etc/passwd.txt", "passwd.pdf")]
+    public async Task ResultsAreNamedAfterTheUpload(string uploaded, string expected)
+    {
+        var isWord = uploaded.EndsWith(".docx", StringComparison.Ordinal);
+        var (status, json) = await Post(isWord ? "rotate" : "any-to-pdf", new { file = new { name = uploaded, data = isWord ? await CreatePdfBase64() : Convert.ToBase64String(Encoding.UTF8.GetBytes("text")) } });
+
+        status.Should().Be(HttpStatusCode.OK);
+        json.GetProperty("fileName").GetString().Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task SeveralFilesAreNamedMerged()
+    {
+        var pdf = await CreatePdfBase64();
+
+        var (_, json) = await Post("text-to-pdf", new { files = new[] { TextFile("one"), TextFile("two") } });
+
+        json.GetProperty("fileName").GetString().Should().Be("merged.pdf");
+        pdf.Should().NotBeEmpty();
     }
 
     [Fact]

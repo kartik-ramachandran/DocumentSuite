@@ -98,7 +98,8 @@ export class ToolsController {
     if (!this.hasService) return;
     this.panel.querySelectorAll<HTMLElement>('details[data-tool]').forEach((details) => {
       const appliesTo = details.dataset.appliesTo;
-      details.hidden = Boolean(appliesTo) && appliesTo !== kind;
+      const needsDownload = details.dataset.download === 'true' && !this.context.settings.allowDownload;
+      details.hidden = needsDownload || (Boolean(appliesTo) && appliesTo !== kind);
     });
     this.imageHint.hidden = kind !== 'image';
   }
@@ -216,6 +217,7 @@ export class ToolsController {
     const details = document.createElement('details');
     details.dataset.tool = tool.id;
     if (tool.appliesTo) details.dataset.appliesTo = tool.appliesTo;
+    if (tool.download) details.dataset.download = 'true';
     const summary = document.createElement('summary');
     summary.textContent = tool.label;
     const form = document.createElement('form');
@@ -307,11 +309,12 @@ export class ToolsController {
         : await this.context.callService(operation, { file: { name: pdfName, data: bytesToBase64(pdf) }, ...values });
       const data = this.requireData(result);
       if (tool.download) {
-        this.saveFile(data, result.fileName ?? 'result', result.contentType);
-        this.context.notify(`${tool.label}: saved ${result.fileName ?? 'the file'}.`);
+        const saved = await viewer.saveFile(data, result.fileName ?? pdfName, result.contentType);
+        if (saved) this.context.notify(`${tool.label}: saved ${saved}.`);
       } else {
         this.history.push({ bytes, name });
         await viewer.load(data, isImage ? pdfName : name);
+        this.context.markChanged();
         this.undoButton.disabled = false;
         this.context.notify(`${tool.label}: done. File size ${formatSize(bytes.length)} → ${formatSize(data.length)}.`);
       }
@@ -343,15 +346,6 @@ export class ToolsController {
     if (!previous) return;
     await this.context.viewer.load(previous.bytes, previous.name);
     this.undoButton.disabled = this.history.length === 0;
-  }
-
-  private saveFile(data: Uint8Array, fileName: string, contentType?: string): void {
-    const url = URL.createObjectURL(new Blob([data as BlobPart], { type: contentType ?? 'application/octet-stream' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
 }
 

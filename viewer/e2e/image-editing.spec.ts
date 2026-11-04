@@ -546,7 +546,7 @@ test.describe('document tools on images', () => {
     await openTools(page);
     const tool = await openTool(page, 'convert');
     const [download] = await Promise.all([page.waitForEvent('download'), tool.getByRole('button', { name: 'Convert', exact: true }).click()]);
-    expect(download.suggestedFilename()).toBe('converted.docx');
+    expect(download.suggestedFilename()).toBe('photo.docx');
     expect(await kind(page)).toBe('image');
   });
 

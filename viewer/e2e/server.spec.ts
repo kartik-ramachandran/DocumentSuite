@@ -147,7 +147,7 @@ test.describe('document tools', () => {
   test('convert downloads an editable Word file', async ({ page }) => {
     const tool = await openTool(page, 'Convert and download');
     const [download] = await Promise.all([page.waitForEvent('download'), tool.getByRole('button', { name: 'Convert', exact: true }).click()]);
-    expect(download.suggestedFilename()).toBe('converted.docx');
+    expect(download.suggestedFilename()).toBe('report.docx');
   });
 });
 

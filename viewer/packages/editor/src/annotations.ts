@@ -147,6 +147,7 @@ export class AnnotationController {
   undo(): void {
     const previous = this.undoStack.pop();
     if (!previous) return;
+    this.context.markChanged();
     this.redoStack.push(this.annotations);
     this.annotations = previous;
     this.selectedId = null;
@@ -156,6 +157,7 @@ export class AnnotationController {
   redo(): void {
     const next = this.redoStack.pop();
     if (!next) return;
+    this.context.markChanged();
     this.undoStack.push(this.annotations);
     this.annotations = next;
     this.selectedId = null;
@@ -203,6 +205,7 @@ export class AnnotationController {
   }
 
   private commit(change: () => void): void {
+    this.context.markChanged();
     this.undoStack.push(this.annotations);
     if (this.undoStack.length > MAX_HISTORY) this.undoStack.shift();
     this.redoStack = [];
@@ -252,6 +255,8 @@ export class AnnotationController {
         this.annotations = this.annotations.filter((annotation) => annotation.id !== id);
       });
     } else if (event.key === 'Escape' && this.tool) {
+      event.preventDefault();
+      event.stopPropagation();
       this.applyTool(null);
     }
   }
@@ -431,7 +436,10 @@ export class AnnotationController {
     editor.addEventListener('blur', () => finish(true));
     editor.addEventListener('keydown', (event) => {
       event.stopPropagation();
-      if (event.key === 'Escape') finish(false);
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        finish(false);
+      }
       if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) finish(true);
     });
   }
@@ -487,7 +495,10 @@ export class AnnotationController {
       });
       form.addEventListener('keydown', (event) => {
         event.stopPropagation();
-        if (event.key === 'Escape') done(null);
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          done(null);
+        }
       });
       this.context.root.querySelector('.pv-root')!.append(form);
       input.focus();

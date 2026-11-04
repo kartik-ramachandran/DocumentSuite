@@ -43,7 +43,7 @@ public class PdfOperationsController : PdfBaseController
             var pdfBytes = await ReadBytes(file);
             var selectedPages = ParsePageSelection(pages);
             var result = await _pdfService.ExtractPdfPages(pdfBytes, selectedPages);
-            return File(result, "application/pdf", selectedPages.Count == 1 ? $"page_{selectedPages[0]}.pdf" : "selected_pages.pdf");
+            return File(result, "application/pdf", OutputName(file, ".pdf"));
         }
         catch (Exception ex)
         {
@@ -73,7 +73,7 @@ public class PdfOperationsController : PdfBaseController
         try
         {
             var result = await _pdfService.CompressPdf(await ReadBytes(file), quality, HttpContext.RequestAborted);
-            return File(result, "application/pdf", "compressed.pdf");
+            return File(result, "application/pdf", OutputName(file, ".pdf"));
         }
         catch (Exception ex)
         {
@@ -88,7 +88,7 @@ public class PdfOperationsController : PdfBaseController
         try
         {
             var result = await _pdfService.RotatePdf(await ReadBytes(file), degrees, pages);
-            return File(result, "application/pdf", "rotated.pdf");
+            return File(result, "application/pdf", OutputName(file, ".pdf"));
         }
         catch (Exception ex)
         {
@@ -103,7 +103,7 @@ public class PdfOperationsController : PdfBaseController
         try
         {
             var result = await _pdfService.AddWatermark(await ReadBytes(file), text, opacity, fontSize);
-            return File(result, "application/pdf", "watermarked.pdf");
+            return File(result, "application/pdf", OutputName(file, ".pdf"));
         }
         catch (Exception ex)
         {
@@ -118,7 +118,7 @@ public class PdfOperationsController : PdfBaseController
         try
         {
             var result = _pdfService.AddPageNumbers(await ReadBytes(file), position, startAt);
-            return File(result, "application/pdf", "numbered.pdf");
+            return File(result, "application/pdf", OutputName(file, ".pdf"));
         }
         catch (Exception ex)
         {
@@ -133,7 +133,7 @@ public class PdfOperationsController : PdfBaseController
         try
         {
             var result = _pdfService.RepairPdf(await ReadBytes(file));
-            return File(result, "application/pdf", "repaired.pdf");
+            return File(result, "application/pdf", OutputName(file, ".pdf"));
         }
         catch (Exception ex)
         {
@@ -148,7 +148,7 @@ public class PdfOperationsController : PdfBaseController
         try
         {
             var result = _pdfService.UnlockPdf(await ReadBytes(file), password);
-            return File(result, "application/pdf", "unlocked.pdf");
+            return File(result, "application/pdf", OutputName(file, ".pdf"));
         }
         catch (Exception ex)
         {
@@ -163,7 +163,7 @@ public class PdfOperationsController : PdfBaseController
         try
         {
             var result = _pdfService.ProtectPdf(await ReadBytes(file), userPassword, ownerPassword);
-            return File(result, "application/pdf", "protected.pdf");
+            return File(result, "application/pdf", OutputName(file, ".pdf"));
         }
         catch (Exception ex)
         {
@@ -178,7 +178,7 @@ public class PdfOperationsController : PdfBaseController
         try
         {
             var result = await _pdfService.OcrPdf(await ReadBytes(file), HttpContext.RequestAborted);
-            return File(System.Text.Encoding.UTF8.GetBytes(result), "text/plain", "extracted-text.txt");
+            return File(System.Text.Encoding.UTF8.GetBytes(result), "text/plain", OutputName(file, ".txt"));
         }
         catch (Exception ex)
         {
