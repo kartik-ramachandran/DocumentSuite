@@ -8,8 +8,8 @@
 <meta property="og:title" content="Document Suite: documents in your app, on your terms">
 <meta property="og:description" content="An open-source PDF viewer, editor, REST API and MCP server. MIT licensed and self-hosted. Try the viewer live, with nothing to install.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://kartik-ramachandran.github.io/PDFSuite/">
-<meta property="og:image" content="https://kartik-ramachandran.github.io/PDFSuite/og.png">
+<meta property="og:url" content="https://kartik-ramachandran.github.io/DocumentSuite/">
+<meta property="og:image" content="https://kartik-ramachandran.github.io/DocumentSuite/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -174,10 +174,10 @@ footer a:first-child { margin-left: 0; }
       <a href="#settings">Settings</a>
       <a href="#api">API</a>
       <a href="#ai">AI clients</a>
-      <a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/viewer/README.md">Docs</a>
+      <a href="https://github.com/kartik-ramachandran/DocumentSuite/blob/main/viewer/README.md">Docs</a>
       <a href="#help">Get help</a>
     </div>
-    <a class="btn" href="https://github.com/kartik-ramachandran/PDFSuite">View on GitHub</a>
+    <a class="btn" href="https://github.com/kartik-ramachandran/DocumentSuite">View on GitHub</a>
   </div>
 </nav>
 
@@ -196,8 +196,8 @@ footer a:first-child { margin-left: 0; }
       <div>
         <p class="label">Add a file list and viewer to a React app</p>
         <div class="code">
-<pre><code>import { FileList } from '@pdf-suite/react';
-import { createEditorPlugin } from '@pdf-suite/editor';
+<pre><code>import { FileList } from '@document-suite/react';
+import { createEditorPlugin } from '@document-suite/editor';
 
 const files = [
   { id: '1', name: 'report.pdf', source: '/report.pdf' },
@@ -298,10 +298,10 @@ export function App() {
         <div role="tabpanel" id="p-react" aria-labelledby="t-react">
           <ol class="steps">
             <li><p><b>Install</b> the packages.</p>
-              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-viewer-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-editor-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-react-0.1.0.tgz</code></pre></div></li>
+              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-viewer-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-editor-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-react-0.2.0.tgz</code></pre></div></li>
             <li><p><b>Render</b> your files.</p>
-              <div class="code"><pre><code>import { createEditorPlugin } from '@pdf-suite/editor';
-import { FileList, type FileItem } from '@pdf-suite/react';
+              <div class="code"><pre><code>import { createEditorPlugin } from '@document-suite/editor';
+import { FileList, type FileItem } from '@document-suite/react';
 
 const files: FileItem[] = [
   { id: 'report', name: 'report.pdf', source: '/report.pdf' },
@@ -321,11 +321,11 @@ export function App() {
         <div role="tabpanel" id="p-vue" aria-labelledby="t-vue" hidden>
           <ol class="steps">
             <li><p><b>Install</b> the packages.</p>
-              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-viewer-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-editor-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-vue-0.1.0.tgz</code></pre></div></li>
+              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-viewer-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-editor-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-vue-0.2.0.tgz</code></pre></div></li>
             <li><p><b>Render</b> your files.</p>
               <div class="code"><pre><code>&lt;script setup lang="ts"&gt;
-import { createEditorPlugin } from '@pdf-suite/editor';
-import { FileList } from '@pdf-suite/vue';
+import { createEditorPlugin } from '@document-suite/editor';
+import { FileList } from '@document-suite/vue';
 import { markRaw } from 'vue';
 
 const files = [
@@ -347,16 +347,16 @@ const options = markRaw({ viewer: { plugins: [createEditorPlugin()] } });
         <div role="tabpanel" id="p-angular" aria-labelledby="t-angular" hidden>
           <ol class="steps">
             <li><p><b>Install</b> the packages.</p>
-              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-viewer-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-editor-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-angular-0.1.0.tgz</code></pre></div></li>
+              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-viewer-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-editor-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-angular-0.2.0.tgz</code></pre></div></li>
             <li><p><b>Render</b> your files.</p>
               <div class="code"><pre><code>import { Component } from '@angular/core';
-import { createEditorPlugin } from '@pdf-suite/editor';
-import { FileListComponent, type FileItem } from '@pdf-suite/angular';
+import { createEditorPlugin } from '@document-suite/editor';
+import { FileListComponent, type FileItem } from '@document-suite/angular';
 
 @Component({
   selector: 'app-root',
   imports: [FileListComponent],
-  template: '&lt;pdf-suite-file-list [files]="files" [options]="options" /&gt;',
+  template: '&lt;document-suite-file-list [files]="files" [options]="options" /&gt;',
 })
 export class AppComponent {
   readonly files: FileItem[] = [
@@ -373,10 +373,10 @@ export class AppComponent {
         <div role="tabpanel" id="p-js" aria-labelledby="t-js" hidden>
           <ol class="steps">
             <li><p><b>Install</b> the packages.</p>
-              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-viewer-0.1.0.tgz https://github.com/kartik-ramachandran/PDFSuite/releases/download/v0.1.0/pdf-suite-editor-0.1.0.tgz</code></pre></div></li>
+              <div class="code"><pre><code>npm install https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-viewer-0.2.0.tgz https://github.com/kartik-ramachandran/DocumentSuite/releases/download/v0.2.0/document-suite-editor-0.2.0.tgz</code></pre></div></li>
             <li><p><b>Render</b> your files, with any bundler.</p>
-              <div class="code"><pre><code>import { createFileList } from '@pdf-suite/viewer';
-import { createEditorPlugin } from '@pdf-suite/editor';
+              <div class="code"><pre><code>import { createFileList } from '@document-suite/viewer';
+import { createEditorPlugin } from '@document-suite/editor';
 
 createFileList(document.getElementById('files'), {
   files: [
@@ -411,7 +411,7 @@ docker compose up -d --build</code></pre></div>
 } }
 
 { id: '2', name: 'b.pdf', source: () =&gt; getFileUrl('2') }</code></pre></div>
-          <p class="note"><a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/viewer/README.md#add-it-to-your-app">Read the full integration guide →</a></p>
+          <p class="note"><a href="https://github.com/kartik-ramachandran/DocumentSuite/blob/main/viewer/README.md#add-it-to-your-app">Read the full integration guide →</a></p>
         </div>
       </div>
     </section>
@@ -426,7 +426,7 @@ docker compose up -d --build</code></pre></div>
         <figure class="frame"><img src="screenshots/settings-panel.png" width="900" height="1073" alt="The settings screen, with groups for the file list, viewer window, downloads, viewer, editing and watermark"></figure>
         <div>
           <h3>For your whole app</h3>
-          <div class="code"><pre><code>import { configureViewer } from '@pdf-suite/react';
+          <div class="code"><pre><code>import { configureViewer } from '@document-suite/react';
 
 configureViewer({
   clickAction: 'menu',
@@ -436,13 +436,13 @@ configureViewer({
           <br>
           <h3>Saved on your server</h3>
           <p>Each app, team or user can have their own, and they follow people between browsers.</p>
-          <div class="code"><pre><code>import { loadViewerSettings } from '@pdf-suite/react';
+          <div class="code"><pre><code>import { loadViewerSettings } from '@document-suite/react';
 
 await loadViewerSettings({
   serviceUrl: 'https://pdf.example.com',
   scope: 'team-a',
 });</code></pre></div>
-          <p class="note"><a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/viewer/README.md#settings">See every setting →</a></p>
+          <p class="note"><a href="https://github.com/kartik-ramachandran/DocumentSuite/blob/main/viewer/README.md#settings">See every setting →</a></p>
         </div>
       </div>
     </section>
@@ -490,7 +490,7 @@ await loadViewerSettings({
             <li><b>Edit:</b> compress, split, redact, watermark and others, in one tool</li>
             <li><b>Compare:</b> a summary of changes, with the full report saved as a file</li>
           </ul>
-          <p class="note">Build the image first with <code>docker build -t pdf-service backend</code>. <a href="https://github.com/kartik-ramachandran/PDFSuite#mcp-server">Read the MCP guide →</a></p>
+          <p class="note">Build the image first with <code>docker build -t pdf-service backend</code>. <a href="https://github.com/kartik-ramachandran/DocumentSuite#mcp-server">Read the MCP guide →</a></p>
         </div>
       </div>
     </section>
@@ -499,7 +499,7 @@ await loadViewerSettings({
       <div class="head">
         <span class="num">07 · BEFORE YOU DEPLOY</span>
         <h2>What it needs, <em>plainly.</em></h2>
-        <p>This is an early release, at version 0.1.0. Here's what works without a server, and what to take care of before going to production.</p>
+        <p>This is an early release, at version 0.2.0. Here's what works without a server, and what to take care of before going to production.</p>
       </div>
       <div class="scroll">
         <table>
@@ -516,7 +516,7 @@ await loadViewerSettings({
       </div>
       <br>
       <ul class="plain">
-        <li><b>Protect the API.</b> It has no login or rate limits, so put it behind your own gateway. <a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/SECURITY.md">Read the security notes</a> before deploying it.</li>
+        <li><b>Protect the API.</b> It has no login or rate limits, so put it behind your own gateway. <a href="https://github.com/kartik-ramachandran/DocumentSuite/blob/main/SECURITY.md">Read the security notes</a> before deploying it.</li>
         <li><b>Viewer settings aren't security controls.</b> Turning off downloads or adding a watermark happens in the browser. To guarantee a watermark, add it on your server with the API.</li>
         <li><b>Packages install from GitHub for now,</b> as they aren't on npm yet.</li>
       </ul>
@@ -526,9 +526,9 @@ await loadViewerSettings({
       <h2>Free to use. <em>Happy to help you set it up.</em></h2>
       <p>Document Suite is open for anyone to use, and there's nothing to buy. If you'd like a hand getting it running, get in touch, and Kartik will help you work it out.</p>
       <div class="actions">
-        <a class="btn" href="https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml">Ask for setup help</a>
-        <a class="btn ghost" href="https://github.com/kartik-ramachandran/PDFSuite">Star it on GitHub</a>
-        <a class="btn ghost" href="https://github.com/kartik-ramachandran/PDFSuite/issues">Report an issue</a>
+        <a class="btn" href="https://github.com/kartik-ramachandran/DocumentSuite/issues/new?template=setup-help.yml">Ask for setup help</a>
+        <a class="btn ghost" href="https://github.com/kartik-ramachandran/DocumentSuite">Star it on GitHub</a>
+        <a class="btn ghost" href="https://github.com/kartik-ramachandran/DocumentSuite/issues">Report an issue</a>
       </div>
     </div>
   </div>
@@ -537,7 +537,7 @@ await loadViewerSettings({
 <footer>
   <div class="wrap">
     <span>Document Suite is free and open source, under the MIT License.</span>
-    <span><a href="https://github.com/kartik-ramachandran/PDFSuite">GitHub</a><a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/viewer/README.md">Viewer docs</a><a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/LICENSE">License</a><a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/THIRD_PARTY_NOTICES.md">Third-party notices</a></span>
+    <span><a href="https://github.com/kartik-ramachandran/DocumentSuite">GitHub</a><a href="https://github.com/kartik-ramachandran/DocumentSuite/blob/main/viewer/README.md">Viewer docs</a><a href="https://github.com/kartik-ramachandran/DocumentSuite/blob/main/LICENSE">License</a><a href="https://github.com/kartik-ramachandran/DocumentSuite/blob/main/THIRD_PARTY_NOTICES.md">Third-party notices</a></span>
   </div>
 </footer>
 
