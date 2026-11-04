@@ -15,7 +15,6 @@ internal static class TestServices
         var tools = new PdfToolRunner(config);
         var layout = new PdfLayoutService(tools, Mock.Of<ILogger<PdfLayoutService>>());
         var conversion = new DocumentConversionService(
-            new DocumentExtractionService(),
             config,
             Mock.Of<ILogger<DocumentConversionService>>(),
             tools,

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using PdfAI.API.Mcp;
+using PdfAI.API.Middleware;
 using PdfAI.API.Services;
 
 const string McpStdioFlag = "--mcp-stdio";
@@ -38,6 +39,7 @@ builder.Services.AddCors(options =>
 });
 
 AddPdfServices(builder.Services);
+builder.Services.AddSingleton<ViewerDocumentStore>();
 
 // MCP tools read and write server files, so the HTTP endpoint only exists once a key and folder are configured.
 var mcpApiKey = builder.Configuration["Mcp:ApiKey"];
@@ -60,6 +62,13 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+// CORS comes first so that browsers' preflight requests are answered before any other handling.
+app.UseCors("Open");
+
+// Runs before routing, because it rewrites JSON requests onto the normal /api/pdf routes.
+app.UseMiddleware<JsonDocumentMiddleware>();
+app.UseRouting();
+
 if (mcpEnabled)
 {
     var expectedKey = SHA256.HashData(Encoding.UTF8.GetBytes(mcpApiKey!));
@@ -78,7 +87,6 @@ if (mcpEnabled)
 }
 
 app.UseHttpsRedirection();
-app.UseCors("Open");
 app.MapControllers();
 if (mcpEnabled)
     app.MapMcp(McpRoute);
@@ -91,7 +99,6 @@ static void AddPdfServices(IServiceCollection services)
     services.AddScoped<PdfLayoutService>();
     services.AddScoped<PdfCompressionService>();
     services.AddScoped<PdfToolkitService>();
-    services.AddScoped<DocumentExtractionService>();
     services.AddScoped<DocumentConversionService>();
     services.AddScoped<PdfProcessingService>();
     services.AddScoped<PdfCompareService>();
@@ -114,3 +121,6 @@ static async Task RunMcpStdioAsync(string[] arguments)
 
     await builder.Build().RunAsync();
 }
+
+// Lets the integration tests host the app.
+public partial class Program;

@@ -170,6 +170,32 @@ public class PdfProcessingService
         return _conversionService.ConvertPowerPointToPdf(pptxBytes, extension, cancellationToken);
     }
 
+    /// <summary>Converts any supported document to PDF, based on its file name. PDFs are returned as they are.</summary>
+    public async Task<byte[]> ConvertAnyToPdf(string fileName, byte[] bytes, CancellationToken cancellationToken = default)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".pdf" => bytes,
+            ".docx" or ".doc" => await ConvertWordToPdf(bytes, extension, cancellationToken),
+            ".xlsx" or ".xls" => await ConvertExcelToPdf(bytes, extension, cancellationToken),
+            ".pptx" or ".ppt" => await ConvertPowerPointToPdf(bytes, extension, cancellationToken),
+            ".html" or ".htm" => ConvertHtmlToPdf(bytes),
+            ".md" or ".markdown" => ConvertMarkdownToPdf(bytes),
+            ".txt" => ConvertTextToPdf(bytes),
+            ".png" or ".jpg" or ".jpeg" => ConvertImagesToPdf([bytes]),
+            _ => throw new ArgumentException($"Unsupported file type '{extension}'. Use pdf, docx, doc, xlsx, xls, pptx, ppt, html, md, txt, png or jpg.")
+        };
+    }
+
+    /// <summary>Returns a document's pages, paragraphs, tables and pictures as structured data.</summary>
+    public async Task<object> ConvertToStructuredData(string fileName, byte[] bytes, bool includeImages, CancellationToken cancellationToken = default)
+    {
+        var pdf = await ConvertAnyToPdf(fileName, bytes, cancellationToken);
+        var pages = await _layoutService.ExtractAsync(pdf, includeImages: true, requireOcr: false, cancellationToken);
+        return DocumentJsonMapper.ToJson(pages, includeImages);
+    }
+
     public byte[] ConvertHtmlToPdf(byte[] htmlBytes)
     {
         return _conversionService.ConvertHtmlToPdf(htmlBytes);

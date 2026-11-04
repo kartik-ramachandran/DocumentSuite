@@ -100,7 +100,7 @@ public class PdfToolRunner
     {
         var isJpeg = format.Equals("jpg", StringComparison.OrdinalIgnoreCase) || format.Equals("jpeg", StringComparison.OrdinalIgnoreCase);
         var extension = isJpeg ? "jpg" : "png";
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-render-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-render-");
 
         try
         {
@@ -141,7 +141,7 @@ public class PdfToolRunner
         CancellationToken cancellationToken = default)
     {
         var isJpeg = format.Equals("jpg", StringComparison.OrdinalIgnoreCase);
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-page-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-page-");
 
         try
         {

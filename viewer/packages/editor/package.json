@@ -1,0 +1,38 @@
+{
+  "name": "@pdf-suite/editor",
+  "version": "0.1.0",
+  "description": "Optional annotations, form filling and document tools for @pdf-suite/viewer.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@pdf-suite/viewer": "^0.1.0"
+  },
+  "dependencies": {
+    "pdf-lib": "1.17.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kartik-ramachandran/PDF.git",
+    "directory": "viewer/packages/editor"
+  },
+  "homepage": "https://github.com/kartik-ramachandran/PDF/tree/main/viewer#readme"
+}

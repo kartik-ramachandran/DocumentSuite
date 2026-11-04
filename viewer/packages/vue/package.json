@@ -1,0 +1,39 @@
+{
+  "name": "@pdf-suite/vue",
+  "version": "0.1.0",
+  "description": "Vue component for the PDF Suite viewer.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@pdf-suite/viewer": "^0.1.0",
+    "vue": ">=3.3"
+  },
+  "devDependencies": {
+    "vue": "^3.5.44"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kartik-ramachandran/PDF.git",
+    "directory": "viewer/packages/vue"
+  },
+  "homepage": "https://github.com/kartik-ramachandran/PDF/tree/main/viewer#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}

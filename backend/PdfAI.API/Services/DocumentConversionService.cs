@@ -5,11 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml;
 using A = DocumentFormat.OpenXml.Drawing;
-using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
-using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
-using XDR = DocumentFormat.OpenXml.Drawing.Spreadsheet;
 using DocumentFormat.OpenXml.Packaging;
-using P = DocumentFormat.OpenXml.Presentation;
 using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Markdig;
@@ -21,20 +17,17 @@ namespace PdfAI.API.Services;
 
 public class DocumentConversionService
 {
-    private readonly DocumentExtractionService _extractionService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DocumentConversionService> _logger;
     private readonly PdfToolRunner _tools;
     private readonly PdfLayoutService _layoutService;
 
     public DocumentConversionService(
-        DocumentExtractionService extractionService,
         IConfiguration configuration,
         ILogger<DocumentConversionService> logger,
         PdfToolRunner tools,
         PdfLayoutService layoutService)
     {
-        _extractionService = extractionService;
         _configuration = configuration;
         _logger = logger;
         _tools = tools;
@@ -111,7 +104,7 @@ public class DocumentConversionService
     {
         var configuredPath = _configuration["Tools:Poppler:PdfToTextPath"];
         var executable = string.IsNullOrWhiteSpace(configuredPath) ? GetSiblingToolPath("pdftotext") : configuredPath;
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-text-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-text-");
         var inputPath = Path.Combine(tempDirectory.FullName, "input.pdf");
         var outputPath = Path.Combine(tempDirectory.FullName, "converted.txt");
 
@@ -145,7 +138,7 @@ public class DocumentConversionService
     public byte[] ConvertHtmlToPdf(byte[] htmlBytes)
     {
         var browser = GetBrowserPath();
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-htmltopdf-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-htmltopdf-");
         var inputPath = Path.Combine(tempDirectory.FullName, "input.html");
         var outputPath = Path.Combine(tempDirectory.FullName, "converted.pdf");
 
@@ -354,7 +347,7 @@ public class DocumentConversionService
 
     private static byte[] ConvertViaCom(byte[] inputBytes, string extension, Action<string, string> export)
     {
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-office-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-office-");
         var inputPath = Path.Combine(tempDirectory.FullName, $"input{extension}");
         var outputPath = Path.Combine(tempDirectory.FullName, "converted.pdf");
 
@@ -376,7 +369,7 @@ public class DocumentConversionService
     private async Task<byte[]> ConvertViaLibreOffice(byte[] inputBytes, string extension, CancellationToken cancellationToken)
     {
         var soffice = FindLibreOffice();
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-libre-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-libre-");
         var inputPath = Path.Combine(tempDirectory.FullName, $"input{extension}");
         // Isolated HOME per request prevents LibreOffice profile conflicts under concurrent load
         var homeDir = Path.Combine(tempDirectory.FullName, "home");
@@ -663,163 +656,6 @@ public class DocumentConversionService
 
         for (var i = 0; i < line.Length; i += maxChars)
             yield return line.Substring(i, Math.Min(maxChars, line.Length - i));
-    }
-
-    private static byte[] RenderMarkdownToPdf(string markdown)
-    {
-        using var document = new PdfDocument();
-        const double margin = 50;
-
-        var fontBody = new XFont("Arial", 11);
-        var fontH1 = new XFont("Arial", 22, XFontStyleEx.Bold);
-        var fontH2 = new XFont("Arial", 17, XFontStyleEx.Bold);
-        var fontH3 = new XFont("Arial", 13, XFontStyleEx.Bold);
-        var fontMono = new XFont("Courier New", 10);
-
-        PdfPage? page = null;
-        XGraphics? gfx = null;
-        double y = margin;
-        double pageHeight = 0;
-        double contentWidth = 0;
-
-        void NewPage()
-        {
-            gfx?.Dispose();
-            page = document.AddPage();
-            page.Size = PdfSharp.PageSize.A4;
-            gfx = XGraphics.FromPdfPage(page);
-            pageHeight = page.Height.Point;
-            contentWidth = page.Width.Point - margin * 2;
-            y = margin;
-        }
-
-        void EnsureSpace(double needed)
-        {
-            if (page is null || y + needed > pageHeight - margin)
-                NewPage();
-        }
-
-        void DrawWrapped(string text, XFont font, double indent = 0, double spaceBefore = 0, double spaceAfter = 6, XBrush? brush = null)
-        {
-            brush ??= XBrushes.Black;
-            y += spaceBefore;
-            var effectiveWidth = contentWidth - indent;
-            var lineH = font.GetHeight() + 3;
-
-            foreach (var word in WrapWords(text, font, gfx!, effectiveWidth))
-            {
-                EnsureSpace(lineH);
-                gfx!.DrawString(word, font, brush, new XRect(margin + indent, y, effectiveWidth, lineH), XStringFormats.TopLeft);
-                y += lineH;
-            }
-
-            y += spaceAfter;
-        }
-
-        NewPage();
-
-        var inCodeBlock = false;
-        var codeLines = new List<string>();
-
-        void FlushCode()
-        {
-            if (codeLines.Count == 0) return;
-            var lineH = fontMono.GetHeight() + 2;
-            var blockH = codeLines.Count * lineH + 12;
-            EnsureSpace(blockH);
-            gfx!.DrawRectangle(new XSolidBrush(XColor.FromArgb(241, 245, 249)), margin, y, contentWidth, blockH);
-            y += 6;
-            foreach (var cl in codeLines)
-            {
-                EnsureSpace(lineH);
-                gfx!.DrawString(cl.Length > 90 ? cl[..90] : cl, fontMono, XBrushes.Black,
-                    new XRect(margin + 8, y, contentWidth - 16, lineH), XStringFormats.TopLeft);
-                y += lineH;
-            }
-            y += 6;
-            codeLines.Clear();
-        }
-
-        foreach (var rawLine in SplitLines(markdown))
-        {
-            var line = rawLine.TrimEnd();
-
-            if (line.TrimStart().StartsWith("```", StringComparison.Ordinal))
-            {
-                if (inCodeBlock) { FlushCode(); inCodeBlock = false; }
-                else inCodeBlock = true;
-                continue;
-            }
-
-            if (inCodeBlock) { codeLines.Add(line); continue; }
-
-            var t = line.Trim();
-            if (string.IsNullOrWhiteSpace(t)) { y += 5; continue; }
-
-            if (t.StartsWith("# "))
-                DrawWrapped(StripInlineMarkdown(t[2..]), fontH1, spaceBefore: 14, spaceAfter: 6);
-            else if (t.StartsWith("## "))
-                DrawWrapped(StripInlineMarkdown(t[3..]), fontH2, spaceBefore: 10, spaceAfter: 4);
-            else if (t.StartsWith("### "))
-                DrawWrapped(StripInlineMarkdown(t[4..]), fontH3, spaceBefore: 8, spaceAfter: 3);
-            else if (t is "---" or "***" or "___")
-            {
-                EnsureSpace(12);
-                gfx!.DrawLine(new XPen(XColor.FromArgb(203, 213, 225)), margin, y + 5, margin + contentWidth, y + 5);
-                y += 12;
-            }
-            else if (t.StartsWith("- ") || t.StartsWith("* "))
-                DrawWrapped("•  " + StripInlineMarkdown(t[2..]), fontBody, indent: 10, spaceAfter: 2);
-            else if (t.StartsWith("> "))
-                DrawWrapped(StripInlineMarkdown(t[2..]), fontBody, indent: 16, spaceAfter: 4,
-                    brush: new XSolidBrush(XColor.FromArgb(71, 85, 105)));
-            else
-                DrawWrapped(StripInlineMarkdown(t), fontBody, spaceAfter: 4);
-        }
-
-        if (inCodeBlock) FlushCode();
-        gfx?.Dispose();
-
-        using var output = new MemoryStream();
-        document.Save(output);
-        return output.ToArray();
-    }
-
-    private static string StripInlineMarkdown(string text)
-    {
-        text = Regex.Replace(text, @"\*\*(.+?)\*\*", "$1");
-        text = Regex.Replace(text, @"__(.+?)__", "$1");
-        text = Regex.Replace(text, @"\*(.+?)\*", "$1");
-        text = Regex.Replace(text, @"_(.+?)_", "$1");
-        text = Regex.Replace(text, @"`(.+?)`", "$1");
-        text = Regex.Replace(text, @"\[(.+?)\]\(.+?\)", "$1");
-        return text;
-    }
-
-    private static IEnumerable<string> WrapWords(string text, XFont font, XGraphics gfx, double maxWidth)
-    {
-        if (string.IsNullOrEmpty(text)) { yield return string.Empty; yield break; }
-
-        var words = text.Split(' ');
-        var line = new StringBuilder();
-
-        foreach (var word in words)
-        {
-            var candidate = line.Length == 0 ? word : line + " " + word;
-            if (gfx.MeasureString(candidate, font).Width > maxWidth && line.Length > 0)
-            {
-                yield return line.ToString();
-                line.Clear();
-                line.Append(word);
-            }
-            else
-            {
-                if (line.Length > 0) line.Append(' ');
-                line.Append(word);
-            }
-        }
-
-        if (line.Length > 0) yield return line.ToString();
     }
 
     private static async Task RunTool(string executable, string arguments)

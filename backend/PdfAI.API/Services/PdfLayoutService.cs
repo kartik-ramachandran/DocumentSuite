@@ -32,7 +32,7 @@ public partial class PdfLayoutService
     /// <param name="requireOcr">Fail when a page needs OCR and it can't run. Otherwise that page keeps only its image.</param>
     public async Task<IReadOnlyList<LayoutPage>> ExtractAsync(byte[] pdfBytes, bool includeImages, bool requireOcr, CancellationToken cancellationToken = default)
     {
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-layout-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-layout-");
         try
         {
             var pdfPath = Path.Combine(tempDirectory.FullName, "input.pdf");
@@ -274,7 +274,7 @@ public partial class PdfLayoutService
 
     private async Task<List<LayoutWord>?> RunOcrAsync(string pdfPath, PageScan scan, bool requireOcr, CancellationToken cancellationToken)
     {
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-ocr-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-ocr-");
         try
         {
             var imagePath = Path.Combine(tempDirectory.FullName, "page.png");

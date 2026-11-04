@@ -113,7 +113,7 @@ public class PdfToolkitService
         if (scanned.Count == 0)
             return new SearchableResult(pdfBytes, 0);
 
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-searchable-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-searchable-");
         try
         {
             var pdfPath = Path.Combine(tempDirectory.FullName, "input.pdf");
@@ -188,7 +188,7 @@ public class PdfToolkitService
                 throw new InvalidOperationException($"A term on page {number} is in rotated text, so it can't be redacted safely.");
         }
 
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-redact-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-redact-");
         try
         {
             var pdfPath = Path.Combine(tempDirectory.FullName, "input.pdf");
@@ -476,7 +476,7 @@ public class PdfToolkitService
     // PDFsharp's Flatten only marks fields read-only, so qpdf is used to merge them into the page and remove them.
     private async Task<byte[]> FlattenFormAsync(byte[] pdfBytes, CancellationToken cancellationToken)
     {
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-flatten-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-flatten-");
         try
         {
             var inputPath = Path.Combine(tempDirectory.FullName, "input.pdf");

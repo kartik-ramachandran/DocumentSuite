@@ -168,7 +168,7 @@ public class PdfCompressionService
 
     private async Task<byte[]> OptimizeStructureAsync(byte[] pdfBytes, CancellationToken cancellationToken)
     {
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfforge-qpdf-");
+        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-qpdf-");
         try
         {
             var inputPath = Path.Combine(tempDirectory.FullName, "input.pdf");

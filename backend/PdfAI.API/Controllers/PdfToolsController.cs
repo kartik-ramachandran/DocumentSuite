@@ -11,13 +11,27 @@ public class PdfToolsController : PdfBaseController
     private const string ZipType = "application/zip";
 
     private readonly PdfToolkitService _toolkit;
+    private readonly PdfProcessingService _pdf;
     private readonly ILogger<PdfToolsController> _logger;
 
-    public PdfToolsController(PdfToolkitService toolkit, ILogger<PdfToolsController> logger)
+    public PdfToolsController(PdfToolkitService toolkit, PdfProcessingService pdf, ILogger<PdfToolsController> logger)
     {
         _toolkit = toolkit;
+        _pdf = pdf;
         _logger = logger;
     }
+
+    /// <summary>Returns the pages, paragraphs, tables and pictures of a PDF, Office, HTML, Markdown, text or image file as JSON.</summary>
+    /// <param name="file">The document.</param>
+    /// <param name="includeImages">Include picture data as base64. Pictures can make the response large.</param>
+    [HttpPost("any-to-json")]
+    public Task<IActionResult> ToJson(IFormFile file, [FromForm] bool includeImages = false) => Run(async () =>
+        Ok(await _pdf.ConvertToStructuredData(file.FileName, await ReadBytes(file), includeImages, HttpContext.RequestAborted)));
+
+    /// <summary>Converts a PDF, Office, HTML, Markdown, text or image file to PDF, based on its file name.</summary>
+    [HttpPost("any-to-pdf")]
+    public Task<IActionResult> ToPdf(IFormFile file) => Run(async () =>
+        File(await _pdf.ConvertAnyToPdf(file.FileName, await ReadBytes(file), HttpContext.RequestAborted), PdfType, "converted.pdf"));
 
     [HttpPost("organize")]
     public Task<IActionResult> Organize(IFormFile file, [FromForm] string? pages) => Run(async () =>

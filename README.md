@@ -1,6 +1,44 @@
-# PDF Processing API
+# PDF Suite
 
-A self-contained REST API and MCP server for PDF processing. It covers merging, splitting, compressing, converting, comparing, and generating PDFs. AI-assisted document review via Azure OpenAI is included but off by default and can be switched on in appsettings.
+An open-source toolkit for working with PDFs and office documents: a REST API, an MCP server for AI clients, and an embeddable viewer and editor for React, Vue and Angular.
+
+- **Convert** between PDF and Word, Excel, PowerPoint, HTML, Markdown, text and images. PDF to Office produces editable documents, not pictures of pages
+- **Edit** by merging, splitting, organizing, rotating, cropping, compressing, watermarking, and adding page numbers or image stamps
+- **Read** with OCR for scanned pages, searchable PDFs, and document structure as JSON
+- **Protect** with permanent redaction, passwords and metadata removal
+- **Fill** PDF forms, and optionally flatten them
+- **Send documents as files or as base64 in JSON**, on every route
+- **Use it from AI clients** over MCP, without passing documents through the model
+- **Embed it in your app** with the [viewer](viewer/README.md)
+
+Everything runs on your own infrastructure, so documents stay with you.
+
+## Quick start
+
+You need Docker.
+
+```bash
+git clone https://github.com/kartik-ramachandran/PDF.git
+cd PDF
+docker compose up -d --build
+```
+
+Open http://localhost:8080/swagger to try the API, or convert a file straight away:
+
+```bash
+curl -o report.pdf -F "files=@report.docx" http://localhost:8080/api/pdf/word-to-pdf
+```
+
+> **Don't expose this to the internet as it stands.** The REST API has no login or rate limits. Read [SECURITY.md](SECURITY.md) before deploying it.
+
+## What's here
+
+| Path | Contents |
+|---|---|
+| [`backend`](backend) | The REST API and MCP server (ASP.NET Core, .NET 10) |
+| [`viewer`](viewer/README.md) | The viewer and editor for React, Vue, Angular and plain JavaScript |
+
+Contributions are welcome, so please see [CONTRIBUTING.md](CONTRIBUTING.md). This project is under the [MIT License](LICENSE), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists what it relies on.
 
 ## Architecture
 
@@ -63,13 +101,13 @@ All endpoints accept `multipart/form-data` unless noted.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/pdf/convert/word` | PDF → editable DOCX with paragraphs, tables, text styling and pictures |
-| POST | `/api/pdf/convert/excel` | PDF → XLSX with one sheet per page and tables split into cells. Plain numbers become numeric cells |
-| POST | `/api/pdf/convert/powerpoint` | PDF → PPTX with one slide per page and editable, positioned text boxes |
-| POST | `/api/pdf/convert/images` | PDF → JPG or PNG. One page returns an image, several return a ZIP. Optional `dpi` from 36 to 600, default 150 (requires Poppler) |
-| POST | `/api/pdf/convert/html` | PDF → self-contained HTML with embedded page images |
-| POST | `/api/pdf/convert/markdown` | PDF → Markdown with embedded page images |
-| POST | `/api/pdf/convert/text` | PDF → plain text (requires Poppler `pdftotext`) |
+| POST | `/api/pdf/pdf-to-word` | PDF → editable DOCX with paragraphs, tables, text styling and pictures |
+| POST | `/api/pdf/pdf-to-excel` | PDF → XLSX with one sheet per page and tables split into cells. Plain numbers become numeric cells |
+| POST | `/api/pdf/pdf-to-powerpoint` | PDF → PPTX with one slide per page and editable, positioned text boxes |
+| POST | `/api/pdf/pdf-to-images` | PDF → JPG or PNG. One page returns an image, several return a ZIP. Optional `dpi` from 36 to 600, default 150 (requires Poppler) |
+| POST | `/api/pdf/pdf-to-html` | PDF → self-contained HTML with embedded page images |
+| POST | `/api/pdf/pdf-to-markdown` | PDF → Markdown with embedded page images |
+| POST | `/api/pdf/pdf-to-text` | PDF → plain text (requires Poppler `pdftotext`) |
 
 ### Conversions — PDF in
 
@@ -82,6 +120,7 @@ All endpoints accept `multipart/form-data` unless noted.
 | POST | `/api/pdf/markdown-to-pdf` | Markdown → PDF |
 | POST | `/api/pdf/text-to-pdf` | Plain text → PDF |
 | POST | `/api/pdf/images-to-pdf` | JPG/PNG images → PDF |
+| POST | `/api/pdf/any-to-pdf` | Any supported file → PDF, based on its file name |
 
 ### Analysis
 
@@ -130,7 +169,7 @@ curl -o converted.pdf \
 ```bash
 curl -o converted.docx \
   -F "file=@document.pdf;type=application/pdf" \
-  http://localhost:8080/api/pdf/convert/word
+  http://localhost:8080/api/pdf/pdf-to-word
 ```
 
 **Merge PDFs**
@@ -229,6 +268,64 @@ const res = await fetch(
 const blob = await res.blob();
 const url = URL.createObjectURL(blob);
 ```
+
+## JSON API
+
+Every route under `/api/pdf` also works with JSON at `/api/json`, so a client can send documents without building multipart forms. For example, `/api/pdf/word-to-pdf` becomes `/api/json/word-to-pdf`.
+
+Send files as base64 under the same field name the normal route uses. Single files go in an object and several go in an array. `data` can also be a `data:` URL. Other properties become ordinary options.
+
+```bash
+curl http://localhost:8080/api/json/word-to-pdf \
+  -H "Content-Type: application/json" \
+  -d '{"files":[{"name":"report.docx","data":"UEsDBBQ..."}]}'
+```
+
+```bash
+curl http://localhost:8080/api/json/rotate \
+  -H "Content-Type: application/json" \
+  -d '{"file":{"name":"report.pdf","data":"JVBERi0..."},"degrees":90}'
+```
+
+A file result comes back as:
+
+```json
+{ "fileName": "converted.pdf", "contentType": "application/pdf", "bytes": 7267, "data": "JVBERi0..." }
+```
+
+Routes that already return JSON, and all errors, come back unchanged. Base64 makes requests and responses about a third larger than the file. The 100 MB limit applies to the decoded files.
+
+### Document contents as JSON
+
+`POST /api/pdf/any-to-json`, or `/api/json/any-to-json`, returns a document's structure. It accepts PDF, Word, Excel, PowerPoint, HTML, Markdown, text and image files. Positions and sizes are in points from the top-left of the page. Set `includeImages` to include picture data as base64.
+
+```json
+{
+  "pageCount": 1,
+  "pages": [{
+    "number": 1, "width": 612, "height": 792, "ocr": false,
+    "blocks": [
+      { "type": "paragraph", "text": "Annual Report", "left": 72, "top": 60, "fontSize": 24, "bold": true },
+      { "type": "table", "left": 72, "top": 120, "columnWidths": [120, 80], "rows": [["Region", "Units"], ["North", "1,250"]] },
+      { "type": "image", "left": 72, "top": 220, "width": 180, "height": 120, "contentType": "image/png", "bytes": 5120 }
+    ]
+  }]
+}
+```
+
+Reading is one way for now: this JSON can't be turned back into a document.
+
+## Viewer Server Mode
+
+These routes support the viewer's server mode. Uploaded documents are temporary: they're deleted after 30 idle minutes, when 200 are stored, or when the app stops. Change this with `Viewer:DocumentLifetimeMinutes` and `Viewer:MaxDocuments`. A document's long random ID is the only thing protecting it.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/pdf/viewer/documents` | Store a document and return its `id`, `pageCount` and page sizes. Non-PDF files are converted first |
+| GET | `/api/pdf/viewer/documents/{id}/pages/{page}?dpi=96` | A page as a PNG. `dpi` is 36 to 300 |
+| GET | `/api/pdf/viewer/documents/{id}/pages/{page}/text` | The page's words and positions, using OCR on scanned pages |
+| GET | `/api/pdf/viewer/documents/{id}/file` | The stored PDF |
+| DELETE | `/api/pdf/viewer/documents/{id}` | Delete it now |
 
 ## MCP Server
 
@@ -375,9 +472,7 @@ When disabled, the endpoint returns `503` with an explanatory message.
 
 ## Notes
 
-- The REST API has no authentication — intended for internal/trusted use only
 - Redaction doesn't detect text inside pictures on pages that have a normal text layer, so check those pages by eye. Stamps are visual only, not cryptographic signatures
-- CORS is open (`AllowAnyOrigin`) — lock this down before exposing externally
 - Upload limit is 100 MB per request
 - Office → PDF conversions use LibreOffice, or COM automation when the matching Office app is installed on Windows
 - PDF → Word, Excel and PowerPoint rebuild the document, so complex layouts won't match exactly. Charts drawn as vector graphics are kept as pictures. OCR is English only

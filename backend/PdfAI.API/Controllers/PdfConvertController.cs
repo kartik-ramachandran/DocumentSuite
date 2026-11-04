@@ -3,7 +3,7 @@ using PdfAI.API.Services;
 
 namespace PdfAI.API.Controllers;
 
-[Route("api/pdf/convert")]
+[Route("api/pdf")]
 public class PdfConvertController : PdfBaseController
 {
     private const int DefaultImageDpi = 150;
@@ -19,7 +19,7 @@ public class PdfConvertController : PdfBaseController
         _logger = logger;
     }
 
-    [HttpPost("word")]
+    [HttpPost("pdf-to-word")]
     public async Task<IActionResult> ToWord(IFormFile file)
     {
         try
@@ -34,7 +34,7 @@ public class PdfConvertController : PdfBaseController
         }
     }
 
-    [HttpPost("excel")]
+    [HttpPost("pdf-to-excel")]
     public async Task<IActionResult> ToExcel(IFormFile file)
     {
         try
@@ -49,7 +49,7 @@ public class PdfConvertController : PdfBaseController
         }
     }
 
-    [HttpPost("powerpoint")]
+    [HttpPost("pdf-to-powerpoint")]
     public async Task<IActionResult> ToPowerPoint(IFormFile file)
     {
         try
@@ -64,7 +64,7 @@ public class PdfConvertController : PdfBaseController
         }
     }
 
-    [HttpPost("images")]
+    [HttpPost("pdf-to-images")]
     public async Task<IActionResult> ToImages(IFormFile file, [FromForm] string format = "jpg", [FromForm] int dpi = DefaultImageDpi)
     {
         try
@@ -91,7 +91,7 @@ public class PdfConvertController : PdfBaseController
         }
     }
 
-    [HttpPost("html")]
+    [HttpPost("pdf-to-html")]
     public async Task<IActionResult> ToHtml(IFormFile file)
     {
         try
@@ -106,7 +106,7 @@ public class PdfConvertController : PdfBaseController
         }
     }
 
-    [HttpPost("markdown")]
+    [HttpPost("pdf-to-markdown")]
     public async Task<IActionResult> ToMarkdown(IFormFile file)
     {
         try
@@ -121,7 +121,7 @@ public class PdfConvertController : PdfBaseController
         }
     }
 
-    [HttpPost("text")]
+    [HttpPost("pdf-to-text")]
     public async Task<IActionResult> ToText(IFormFile file)
     {
         try

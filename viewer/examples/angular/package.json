@@ -1,0 +1,26 @@
+{
+  "name": "example-angular",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "ng build",
+    "preview": "vite preview --outDir dist/example-angular/browser --port 5175 --strictPort"
+  },
+  "dependencies": {
+    "@angular/common": "^22.2.0",
+    "@angular/compiler": "^22.2.0",
+    "@angular/core": "^22.2.0",
+    "@angular/platform-browser": "^22.2.0",
+    "@pdf-suite/angular": "*",
+    "@pdf-suite/viewer": "*",
+    "@pdf-suite/editor": "*",
+    "rxjs": "^7.8.0",
+    "tslib": "^2.8.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.2.0",
+    "@angular/cli": "^22.2.0",
+    "@angular/compiler-cli": "^22.2.0",
+    "vite": "^8.3.5"
+  }
+}

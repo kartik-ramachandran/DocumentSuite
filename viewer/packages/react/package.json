@@ -1,0 +1,40 @@
+{
+  "name": "@pdf-suite/react",
+  "version": "0.1.0",
+  "description": "React component for the PDF Suite viewer.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@pdf-suite/viewer": "^0.1.0",
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "react": "^19.3.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kartik-ramachandran/PDF.git",
+    "directory": "viewer/packages/react"
+  },
+  "homepage": "https://github.com/kartik-ramachandran/PDF/tree/main/viewer#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}

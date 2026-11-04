@@ -84,7 +84,7 @@ public sealed class PdfMcpTools
 
         var pdfs = new List<byte[]>();
         foreach (var input in inputs)
-            pdfs.Add(await ToPdf(input, await _workspace.ReadAsync(input, cancellationToken), cancellationToken));
+            pdfs.Add(await _pdf.ConvertAnyToPdf(input, await _workspace.ReadAsync(input, cancellationToken), cancellationToken));
 
         var content = pdfs.Count == 1 ? pdfs[0] : await _pdf.MergePdfs(pdfs);
         return await Save(output, inputs[0], "pdf", content, cancellationToken);
@@ -169,23 +169,6 @@ public sealed class PdfMcpTools
     {
         var images = await _pdf.ConvertPdfToImages(pdf, format, dpi, cancellationToken);
         return images.Count == 1 ? (images[0], format) : (ImageArchive.Create(images, format), "zip");
-    }
-
-    private async Task<byte[]> ToPdf(string input, byte[] bytes, CancellationToken cancellationToken)
-    {
-        var extension = Path.GetExtension(input).ToLowerInvariant();
-        return extension switch
-        {
-            ".pdf" => bytes,
-            ".docx" or ".doc" => await _pdf.ConvertWordToPdf(bytes, extension, cancellationToken),
-            ".xlsx" or ".xls" => await _pdf.ConvertExcelToPdf(bytes, extension, cancellationToken),
-            ".pptx" or ".ppt" => await _pdf.ConvertPowerPointToPdf(bytes, extension, cancellationToken),
-            ".html" or ".htm" => _pdf.ConvertHtmlToPdf(bytes),
-            ".md" or ".markdown" => _pdf.ConvertMarkdownToPdf(bytes),
-            ".txt" => _pdf.ConvertTextToPdf(bytes),
-            ".png" or ".jpg" or ".jpeg" => _pdf.ConvertImagesToPdf([bytes]),
-            _ => throw new ArgumentException($"Unsupported input file type '{extension}'.")
-        };
     }
 
     private async Task<object> Save(string? output, string source, string extension, byte[] content, CancellationToken cancellationToken)

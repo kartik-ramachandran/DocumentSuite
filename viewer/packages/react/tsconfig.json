@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "jsx": "react-jsx",
+    "paths": {
+      "@pdf-suite/viewer": ["../core/dist/index.d.ts"]
+    }
+  },
+  "include": ["src"]
+}

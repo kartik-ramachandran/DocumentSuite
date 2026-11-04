@@ -1,13 +1,25 @@
+# .NET
 **/bin/
 **/obj/
-frontend/node_modules/
-frontend/dist/
-.env
-.vscode/
 *.user
 *.suo
-*.log
-appsettings.Development.json
-settings.json
+
+# Node
+node_modules/
+dist/
+.angular/
+
+# Test output and generated files. Test documents are generated, never committed.
 *.pdf
+*.log
+test-results/
+playwright-report/
+viewer/e2e/.fixtures/
+
+# Local settings and secrets
+.env
+.vscode/
+appsettings.Development.json
+
+# MCP working folder
 workspace/
