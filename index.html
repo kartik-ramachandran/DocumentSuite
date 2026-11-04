@@ -140,7 +140,8 @@ td:first-child { color: var(--ink); font-weight: 500; }
 ul.plain { margin: 0; padding-left: 18px; }
 ul.plain li { margin-bottom: 8px; }
 .final { padding: 64px 0; text-align: center; border-top: 1px solid var(--ink); }
-.final h2 { margin-bottom: 18px; }
+.final h2 { margin-bottom: 12px; }
+.final p { max-width: 36em; margin: 0 auto 22px; font-size: 17px; }
 .final .actions { justify-content: center; margin-bottom: 0; }
 footer { padding: 24px 0 36px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
 footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
@@ -173,6 +174,7 @@ footer a:first-child { margin-left: 0; }
       <a href="#api">API</a>
       <a href="#ai">AI clients</a>
       <a href="https://github.com/kartik-ramachandran/PDFSuite/blob/main/viewer/README.md">Docs</a>
+      <a href="#help">Get help</a>
     </div>
     <a class="btn" href="https://github.com/kartik-ramachandran/PDFSuite">View on GitHub</a>
   </div>
@@ -188,7 +190,7 @@ footer a:first-child { margin-left: 0; }
           <a class="btn" href="#try">Try it live</a>
           <a class="btn ghost" href="#install">Add it to your app</a>
         </div>
-        <p class="facts">Free · MIT licensed · No account or per-seat fees<br>Works with React, Vue, Angular and plain JavaScript</p>
+        <p class="facts">Free and open · MIT licensed · Nothing to buy<br>Works with React, Vue, Angular and plain JavaScript</p>
       </div>
       <div>
         <p class="label">Add a file list and viewer to a React app</p>
@@ -519,11 +521,13 @@ await loadViewerSettings({
       </ul>
     </section>
 
-    <div class="final">
-      <h2>Try it, <em>and tell us what's missing.</em></h2>
+    <div class="final" id="help">
+      <h2>Free to use. <em>Happy to help you set it up.</em></h2>
+      <p>PDF Suite is open for anyone to use, and there's nothing to buy. If you'd like a hand getting it running, get in touch, and Kartik will help you work it out.</p>
       <div class="actions">
-        <a class="btn" href="https://github.com/kartik-ramachandran/PDFSuite">Star it on GitHub</a>
-        <a class="btn ghost" href="https://github.com/kartik-ramachandran/PDFSuite/issues">Report an issue or request a feature</a>
+        <a class="btn" href="https://github.com/kartik-ramachandran/PDFSuite/issues/new?template=setup-help.yml">Ask for setup help</a>
+        <a class="btn ghost" href="https://github.com/kartik-ramachandran/PDFSuite">Star it on GitHub</a>
+        <a class="btn ghost" href="https://github.com/kartik-ramachandran/PDFSuite/issues">Report an issue</a>
       </div>
     </div>
   </div>
