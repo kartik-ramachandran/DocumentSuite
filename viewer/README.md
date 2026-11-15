@@ -8,7 +8,7 @@ An open-source PDF and image viewer and editor for React, Vue, Angular and plain
 - **Viewing:** zoom, thumbnails, search, selectable text, rotation, printing and download
 - **Images:** PNG, JPEG, GIF, WebP, BMP, SVG, AVIF and ICO files open automatically, with the same toolbar, annotations and document tools as PDFs, plus pan and flip
 - **Editing (optional):** highlights, drawing, text, comments, pictures and form filling, all saved into the PDF
-- **Document tools (with the API):** organize pages, redact, compress, OCR, watermark, convert and more
+- **Document tools (with the API):** organize pages, redact, compress, OCR in many languages, watermark, convert and more
 - **Two rendering modes:** in the browser, so documents stay on the device, or on your server
 - **Other formats:** with the API, it also opens Word, Excel, PowerPoint, HTML, Markdown and text files
 - **Settings for everything:** clicks, toolbar position, watermark and more, set in code or on a ready-made screen, and saved in the browser or on your server

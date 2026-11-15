@@ -17,6 +17,12 @@ docker compose up -d --build
 # API tests
 dotnet test backend/PdfAI.API.Tests/PdfAI.API.Tests.csproj
 
+# OCR service tests (Python 3.10 or later; PaddleOCR isn't needed for these)
+cd ocr-service && pip install pytest && python -m pytest tests && cd ..
+
+# Optional: also start the PaddleOCR service, and use it from the API
+OCR_ENGINE=paddle docker compose --profile ocr up -d --build
+
 # Viewer: build it, then run the browser tests against the React, Vue and Angular demos
 cd viewer
 npm install
@@ -26,7 +32,7 @@ npx playwright install chromium
 npm test
 ```
 
-The browser tests that need the API are skipped if it isn't running at `localhost:8080`.
+The browser tests that need the API are skipped if it isn't running at `localhost:8080`. The OCR tests use a fake engine, so they don't need Tesseract or PaddleOCR installed.
 
 ## Layout
 
@@ -34,6 +40,8 @@ The browser tests that need the API are skipped if it isn't running at `localhos
 |---|---|
 | `backend/PdfAI.API` | The REST API and MCP server (ASP.NET Core) |
 | `backend/PdfAI.API.Tests` | API unit and integration tests |
+| `backend/PdfAI.API/Services/Ocr` | OCR engines, scan clean-up, table checks and the searchable-PDF text layer |
+| `ocr-service` | The optional PaddleOCR service (Python) |
 | `viewer/packages/core` | The framework-independent viewer |
 | `viewer/packages/editor` | Optional annotations, form filling and document tools |
 | `viewer/packages/react`, `vue`, `angular` | Thin framework wrappers |
