@@ -1,0 +1,5 @@
+# All Apache 2.0, MIT or BSD. PaddlePaddle itself is installed by the Dockerfile, so the CPU and GPU builds can differ.
+paddleocr[doc-parser]==3.7.0
+fastapi==0.162.0
+uvicorn==0.54.0
+python-multipart==0.0.33

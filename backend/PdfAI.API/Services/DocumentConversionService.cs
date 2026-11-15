@@ -36,17 +36,17 @@ public class DocumentConversionService
 
     public async Task<byte[]> ConvertPdfToWord(byte[] pdfBytes, CancellationToken cancellationToken = default)
     {
-        return EditableDocumentWriter.WriteWord(await _layoutService.ExtractAsync(pdfBytes, includeImages: true, requireOcr: false, cancellationToken));
+        return EditableDocumentWriter.WriteWord(await _layoutService.ExtractAsync(pdfBytes, ExtractOptions.ForOffice(), cancellationToken));
     }
 
     public async Task<byte[]> ConvertPdfToExcel(byte[] pdfBytes, CancellationToken cancellationToken = default)
     {
-        return EditableDocumentWriter.WriteExcel(await _layoutService.ExtractAsync(pdfBytes, includeImages: true, requireOcr: false, cancellationToken));
+        return EditableDocumentWriter.WriteExcel(await _layoutService.ExtractAsync(pdfBytes, ExtractOptions.ForOffice(), cancellationToken));
     }
 
     public async Task<byte[]> ConvertPdfToPowerPoint(byte[] pdfBytes, CancellationToken cancellationToken = default)
     {
-        return EditableDocumentWriter.WritePowerPoint(await _layoutService.ExtractAsync(pdfBytes, includeImages: true, requireOcr: false, cancellationToken));
+        return EditableDocumentWriter.WritePowerPoint(await _layoutService.ExtractAsync(pdfBytes, ExtractOptions.ForOffice(), cancellationToken));
     }
 
     public Task<List<byte[]>> ConvertPdfToImages(byte[] pdfBytes, string format, int dpi = 220, CancellationToken cancellationToken = default)

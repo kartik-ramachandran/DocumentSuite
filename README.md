@@ -18,7 +18,7 @@ More than 40 routes, which you can call with file uploads or with base64 inside 
 
 - **Convert** between PDF and Word, Excel, PowerPoint, HTML, Markdown, text and images. PDF to Office produces editable documents with real paragraphs and tables, not pictures of pages
 - **Edit** by merging, splitting, organizing, rotating, cropping, compressing, watermarking, and adding page numbers or image stamps
-- **Read** with OCR for scanned pages, searchable PDFs, and document structure as JSON
+- **Read** with OCR for scans and text inside pictures, in many languages, with optional PaddleOCR models for hard tables. Make PDFs searchable, and get document structure as JSON
 - **Protect** with permanent redaction, passwords and metadata removal
 - **Fill** PDF forms, and optionally flatten them
 
@@ -102,6 +102,7 @@ This is an early release, at version 0.2.0.
 | [`backend`](backend) | The REST API and MCP server (ASP.NET Core, .NET 10) |
 | [`viewer`](viewer/README.md) | The viewer and editor for React, Vue, Angular and plain JavaScript |
 | [`viewer/examples`](viewer/examples) | Demos for React, Vue and Angular |
+| [`ocr-service`](ocr-service/README.md) | The optional PaddleOCR service for better OCR and tables (Python) |
 | [`docs/screenshots`](docs/screenshots) | The screenshots above, which only show generated sample files |
 
 Contributions are welcome, so please see [CONTRIBUTING.md](CONTRIBUTING.md). This project is under the [MIT License](LICENSE), and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists what it relies on.
@@ -110,7 +111,8 @@ Contributions are welcome, so please see [CONTRIBUTING.md](CONTRIBUTING.md). Thi
 
 - **PdfProcessingService** — deterministic PDF operations (merge, split, compress, rotate, watermark, protect, unlock, page numbers, repair, and conversions)
 - **DocumentConversionService** — converts between PDF and Word/Excel/PowerPoint/HTML/Markdown/Text/Images
-- **PdfLayoutService / PdfLayoutAnalyzer** — read each page's text and images, run OCR on scanned pages, and rebuild reading order, paragraphs and tables
+- **PdfLayoutService / PdfLayoutAnalyzer** — read each page's text and images, run OCR on scanned pages and pictures, and rebuild reading order, paragraphs and tables
+- **OcrService** — picks the OCR engine, turns and straightens scans, and checks tables from layout models against the OCR text (see [OCR](#ocr))
 - **EditableDocumentWriter** — writes that layout as editable DOCX, XLSX and PPTX
 - **PdfCompressionService** — re-encodes images and optimises PDF structure
 - **PdfToolkitService** — page organising, searchable PDFs, redaction, metadata, image extraction, stamps, cropping and forms
@@ -127,7 +129,8 @@ Contributions are welcome, so please see [CONTRIBUTING.md](CONTRIBUTING.md). Thi
 - DocumentFormat.OpenXml — DOCX/XLSX/PPTX generation and reading
 - SkiaSharp — visual page diff rendering
 - Poppler (`pdftoppm`, `pdftotext`) — PDF page rendering and text extraction
-- Tesseract — OCR for scanned pages
+- Tesseract — OCR for scanned pages and pictures
+- PaddleOCR (optional, separate service) — more accurate OCR and table models
 - qpdf — structural PDF optimisation
 - Azure.AI.OpenAI — optional AI review (disabled by default)
 
@@ -149,7 +152,7 @@ All endpoints accept `multipart/form-data` unless noted.
 | POST | `/api/pdf/organize` | Reorder pages. `pages` lists them in output order, such as `3,1,5-8`. Pages not listed are dropped |
 | POST | `/api/pdf/remove-pages` | Delete the listed `pages` |
 | POST | `/api/pdf/split/ranges` | Split into several PDFs, returned as a ZIP. Use `ranges` (`1-3,4,5-9`) or `everyPages` |
-| POST | `/api/pdf/searchable` | Add selectable, searchable text to scanned pages with OCR. `X-Ocr-Page-Count` reports how many pages changed |
+| POST | `/api/pdf/searchable` | Add selectable, searchable text to scanned pages and to text in pictures, as an invisible layer over the unchanged page. Optional `languages` and `engine`. `X-Ocr-Page-Count` reports how many pages changed |
 | POST | `/api/pdf/redact` | Permanently remove text. Send one or more `terms`, optional `matchCase`. Matching pages become pictures with black boxes. Returns 422 if nothing matched |
 | POST | `/api/pdf/metadata` | Read title, author, subject, keywords, dates and page count |
 | POST | `/api/pdf/metadata/update` | Set `title`, `author`, `subject` or `keywords`. `clear=true` removes existing metadata first |
@@ -161,7 +164,7 @@ All endpoints accept `multipart/form-data` unless noted.
 | POST | `/api/pdf/repair` | Re-write corrupt or malformed PDF |
 | POST | `/api/pdf/unlock` | Remove password protection |
 | POST | `/api/pdf/protect` | Add user and owner passwords |
-| POST | `/api/pdf/ocr` | Full document text as plain text. Pages with no text layer, such as scans, are read with OCR (requires Tesseract) |
+| POST | `/api/pdf/ocr` | Full document text as plain text. Scans and text inside pictures are read with OCR. Optional `languages`, `engine` and `tables` (see [OCR](#ocr)) |
 
 ### Conversions — PDF out
 
@@ -371,7 +374,7 @@ Routes that already return JSON, and all errors, come back unchanged. Base64 mak
 {
   "pageCount": 1,
   "pages": [{
-    "number": 1, "width": 612, "height": 792, "ocr": false,
+    "number": 1, "width": 612, "height": 792, "ocr": false, "ocrEngine": null, "ocrConfidence": null, "ocrWarnings": null,
     "blocks": [
       { "type": "paragraph", "text": "Annual Report", "left": 72, "top": 60, "fontSize": 24, "bold": true },
       { "type": "table", "left": 72, "top": 120, "columnWidths": [120, 80], "rows": [["Region", "Units"], ["North", "1,250"]] },
@@ -381,7 +384,82 @@ Routes that already return JSON, and all errors, come back unchanged. Base64 mak
 }
 ```
 
+On pages read with OCR, `ocrEngine` names the engine and `ocrConfidence` is the mean word confidence from 0 to 1. Paragraphs and tables carry their own `confidence`, and `fromImage` marks text read from a picture. A table found by a layout model has `"source": "layout-model"` and `unverifiedWords`, the number of its words the OCR text doesn't contain. `ocrWarnings` lists anything to check by eye. This route also takes `languages`, `engine` and `tables`.
+
 Reading is one way for now: this JSON can't be turned back into a document.
+
+## OCR
+
+Every document goes through the same OCR steps, whichever route reads it: text, JSON, Office conversions, searchable PDFs, redaction and the viewer's text selection.
+
+- **Scanned pages**, with no real text layer, are rendered at 300 DPI and read with OCR
+- **Text inside pictures** on pages that do have real text, such as a pasted screenshot or a stamp, is read too. Word, Excel and PowerPoint keep the picture instead, so its text isn't repeated
+- **Before OCR**, each scan is turned the right way up (Tesseract's orientation check), straightened if it's tilted up to 5°, and has its contrast stretched if it's faded. Positions are mapped back to the page as it's displayed, so selection, searchable text and redaction boxes still land on the right words
+- **Searchable PDFs** keep every page exactly as it was and add the OCR text as an invisible layer on top. Any script that the OCR engine reads survives copy and search
+
+### Engines
+
+| Engine | Runs | Good at | Licence |
+|---|---|---|---|
+| `tesseract` (default) | On the CPU, inside the API's container | Clean printed text, about 100 languages | Apache-2.0 |
+| `paddle` | On the CPU or a GPU, in the [OCR service](ocr-service/README.md) | Noisy scans, photos of documents, Chinese, Japanese and Korean | Apache-2.0 |
+
+If `paddle` is the server's default and its service is down, pages fall back to Tesseract and say so in `ocrWarnings`. A request that names `engine=paddle` fails instead, so it never silently gets a different engine.
+
+### Tables from layout models
+
+By default, tables come from the positions of the words. On scanned pages, a layout model in the OCR service can find them instead, which handles merged cells, missing ruling lines and dense financial tables much better:
+
+| `tables` | Model | Hardware |
+|---|---|---|
+| `none` (default) | Word positions only | Anything |
+| `structure` | PP-StructureV3 | CPU |
+| `vl` | PaddleOCR-VL, a 0.9-billion-parameter vision-language model | NVIDIA GPU |
+
+Layout models can leave text out, or write text that isn't on the page. So every table from a model is checked against the words that the OCR engine read in the same area:
+
+- A cell word that matches an OCR word takes that word's real position
+- A number that doesn't match is listed in `ocrWarnings`, so check it against the page. For financial documents, check every listed number
+- Words that OCR read in the table area but the model left out stay in the output as text next to the table, and are listed in `ocrWarnings`
+- If more than 30% of a table's words don't match, the table is dropped and rebuilt from word positions
+
+### Languages
+
+Use Tesseract codes joined with `+`, such as `eng+deu` or `chi_sim`, in the `languages` field or `Ocr:Languages`. The Docker image includes English, German, French, Spanish, Italian, Portuguese and Dutch. Add more when building:
+
+```bash
+docker compose build --build-arg TESSERACT_LANGS="eng deu chi-sim jpn ara hin" pdfapi
+```
+
+The OCR service maps the same codes to PaddleOCR's models, which read one script at a time.
+
+### Settings
+
+```json
+{
+  "Ocr": {
+    "Engine": "tesseract",
+    "Languages": "eng",
+    "Tables": "none",
+    "ServiceUrl": "",
+    "ServiceTimeoutSeconds": 300,
+    "MinConfidence": 0.3,
+    "DetectOrientation": true,
+    "Deskew": true,
+    "ReadTextInImages": true
+  }
+}
+```
+
+`ServiceUrl` is the OCR service's address, such as `http://ocr:8000/`. Words below `MinConfidence` (0 to 1) are dropped as noise. With Docker Compose, set them through `OCR_ENGINE`, `OCR_LANGUAGES`, `OCR_TABLES` and `OCR_SERVICE_URL`:
+
+```bash
+# PaddleOCR with PP-StructureV3 tables, on the CPU
+OCR_ENGINE=paddle OCR_TABLES=structure docker compose --profile ocr up
+
+# PaddleOCR-VL tables on an NVIDIA GPU
+OCR_ENGINE=paddle OCR_TABLES=vl OCR_SERVICE_URL=http://ocr-gpu:8000/ docker compose --profile gpu up
+```
 
 ## Viewer Server Mode
 
@@ -457,7 +535,7 @@ AI clients can use the service through the [Model Context Protocol](https://mode
 | `pdf_convert` | PDF to docx, xlsx, pptx, txt, html, md, jpg or png |
 | `pdf_create` | Combine pdf, Office, html, md, txt and image files into one PDF |
 | `pdf_edit` | Compress, organize, remove pages, split into files, rotate, watermark, add page numbers, redact, make searchable, extract images, clear metadata, repair, protect or unlock |
-| `pdf_text` | Save the full text to a file, using OCR on scanned pages. `preview_chars` returns some of it inline |
+| `pdf_text` | Save the full text to a file, using OCR on scanned pages and pictures. Optional `languages`, `engine` and `tables`. `preview_chars` returns some of it inline |
 | `pdf_compare` | Return change counts and save the full report as JSON |
 
 All paths are relative to one workspace folder. Tools can't read or write outside it, can't follow symbolic links, and never overwrite a file: a new result gets a numeric suffix.
@@ -514,7 +592,8 @@ Everyone who has the key shares one workspace folder, so they can read each othe
 
 - .NET 10 SDK
 - Poppler — required for PDF → image, text, HTML and Markdown, and for scanned pages
-- Tesseract — required to read scanned pages
+- Tesseract, with the language packs you need — required to read scanned pages and text in pictures
+- Docker — optional, to run the [PaddleOCR service](ocr-service/README.md)
 - qpdf — optional, improves compression
 - LibreOffice or Microsoft Office — required for Word/Excel/PowerPoint → PDF
 - Chrome or Edge — required for HTML → PDF
@@ -588,8 +667,9 @@ When disabled, the endpoint returns `503` with an explanatory message.
 
 ## Notes
 
-- Redaction doesn't detect text inside pictures on pages that have a normal text layer, so check those pages by eye. Stamps are visual only, not cryptographic signatures
+- Redaction finds text inside pictures with OCR, which can misread words, so check pictures by eye. Stamps are visual only, not cryptographic signatures
+- OCR can misread text, and layout models can leave text out or add text that isn't there. Check numbers in financial documents against the page, starting with any listed in `ocrWarnings`
 - Upload limit is 100 MB per request
 - Office → PDF conversions use LibreOffice, or COM automation when the matching Office app is installed on Windows
-- PDF → Word, Excel and PowerPoint rebuild the document, so complex layouts won't match exactly. Charts drawn as vector graphics are kept as pictures. OCR is English only
+- PDF → Word, Excel and PowerPoint rebuild the document, so complex layouts won't match exactly. Charts drawn as vector graphics are kept as pictures
 - Visual comparison previews are capped at 12 pages; pages beyond that are text-diffed only

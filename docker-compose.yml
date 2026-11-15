@@ -20,6 +20,38 @@ services:
       - Mcp__WorkspaceRoot=/workspace
       - Settings__Path=/data/settings
       - Settings__WriteKey=${SETTINGS_WRITE_KEY:-}
+      # OCR. Tesseract runs in this container. Set OCR_ENGINE=paddle and start the ocr profile for PaddleOCR.
+      - Ocr__Engine=${OCR_ENGINE:-tesseract}
+      - Ocr__Languages=${OCR_LANGUAGES:-eng}
+      - Ocr__Tables=${OCR_TABLES:-none}
+      - Ocr__ServiceUrl=${OCR_SERVICE_URL:-http://ocr:8000/}
+
+  # PaddleOCR on the CPU: docker compose --profile ocr up
+  ocr:
+    profiles: ["ocr"]
+    build:
+      context: ./ocr-service
+    volumes:
+      - ocr-models:/home/ocr/.paddlex
+
+  # PaddleOCR with PaddleOCR-VL on an NVIDIA GPU: OCR_SERVICE_URL=http://ocr-gpu:8000/ docker compose --profile gpu up
+  ocr-gpu:
+    profiles: ["gpu"]
+    build:
+      context: ./ocr-service
+      args:
+        PADDLE_PACKAGE: paddlepaddle-gpu==3.2.2
+        PADDLE_INDEX: https://www.paddlepaddle.org.cn/packages/stable/cu126/
+    volumes:
+      - ocr-models:/home/ocr/.paddlex
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
 volumes:
   viewer-settings:
+  ocr-models:

@@ -3,6 +3,7 @@ using System.Text.Json;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
 using PdfAI.API.Services;
+using PdfAI.API.Services.Ocr;
 using UglyToad.PdfPig;
 
 namespace PdfAI.API.Mcp;
@@ -90,7 +91,7 @@ public sealed class PdfMcpTools
         return await Save(output, inputs[0], "pdf", content, cancellationToken);
     });
 
-    [McpServerTool(Name = "pdf_edit"), Description("Edit a PDF. action: compress (quality: less|recommended|extreme), split or organize (pages in output order: 3,1,5-8), remove_pages (pages), split_files (pages: 1-3,4-6, gives a zip), rotate (degrees, pages), watermark (text), page_numbers, redact (terms; permanent), searchable (OCR scans into selectable text), extract_images (gives a zip), clear_metadata, repair, protect (password, owner_password), unlock (password).")]
+    [McpServerTool(Name = "pdf_edit"), Description("Edit a PDF. action: compress (quality: less|recommended|extreme), split or organize (pages in output order: 3,1,5-8), remove_pages (pages), split_files (pages: 1-3,4-6, gives a zip), rotate (degrees, pages), watermark (text), page_numbers, redact (terms; permanent), searchable (OCR scans and text in pictures into selectable text; languages such as eng+deu), extract_images (gives a zip), clear_metadata, repair, protect (password, owner_password), unlock (password).")]
     public Task<string> Edit(
         string input,
         string action,
@@ -102,6 +103,7 @@ public sealed class PdfMcpTools
         string[]? terms = null,
         string? password = null,
         string? owner_password = null,
+        string? languages = null,
         CancellationToken cancellationToken = default) => Run(async () =>
     {
         var bytes = await _workspace.ReadAsync(input, cancellationToken);
@@ -129,7 +131,7 @@ public sealed class PdfMcpTools
                 extra = new { redacted.RedactedWords, redacted.RedactedPages };
                 break;
             case "searchable":
-                var searchable = await _toolkit.MakeSearchableAsync(bytes, cancellationToken);
+                var searchable = await _toolkit.MakeSearchableAsync(bytes, new OcrOverrides(Languages: languages), cancellationToken);
                 content = searchable.Pdf;
                 extra = new { searchable.OcrPages };
                 break;
@@ -142,10 +144,17 @@ public sealed class PdfMcpTools
         return new { output = saved, bytes = content.Length, details = extra };
     });
 
-    [McpServerTool(Name = "pdf_text"), Description("Save a PDF's full text to a file, using OCR on scanned pages. Set preview_chars only if you need some of the text inline.")]
-    public Task<string> Text(string input, string? output = null, int preview_chars = 0, CancellationToken cancellationToken = default) => Run(async () =>
+    [McpServerTool(Name = "pdf_text"), Description("Save a PDF's full text to a file, using OCR on scanned pages and pictures. languages: Tesseract codes such as eng+deu. engine: tesseract or paddle. tables: none, structure or vl. Set preview_chars only if you need some of the text inline.")]
+    public Task<string> Text(
+        string input,
+        string? output = null,
+        int preview_chars = 0,
+        string? languages = null,
+        string? engine = null,
+        string? tables = null,
+        CancellationToken cancellationToken = default) => Run(async () =>
     {
-        var text = await _pdf.OcrPdf(await _workspace.ReadAsync(input, cancellationToken), cancellationToken);
+        var text = await _pdf.OcrPdf(await _workspace.ReadAsync(input, cancellationToken), new OcrOverrides(engine, languages, tables), cancellationToken);
         var saved = await _workspace.WriteAsync(output, input, "txt", System.Text.Encoding.UTF8.GetBytes(text), cancellationToken);
         var previewLength = Math.Clamp(preview_chars, 0, Math.Min(MaxPreviewChars, text.Length));
         return previewLength > 0

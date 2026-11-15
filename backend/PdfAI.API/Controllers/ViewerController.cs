@@ -81,19 +81,17 @@ public class ViewerController : ControllerBase
             return NotFound(new { error = $"This document has {document.Pages.Count} pages." });
 
         // Not tied to this request, since the result is shared by every later request for the document.
-        document.Layout ??= _layout.ExtractAsync(await System.IO.File.ReadAllBytesAsync(document.Path, HttpContext.RequestAborted), includeImages: false, requireOcr: false, CancellationToken.None);
+        document.Layout ??= _layout.ExtractAsync(await System.IO.File.ReadAllBytesAsync(document.Path, HttpContext.RequestAborted), ExtractOptions.ForPositions(requireOcr: false), CancellationToken.None);
         var layoutPage = (await document.Layout)[page - 1];
 
-        // Rotated pages have no reliable positions on the original page, so they get no selectable text.
+        // Pages with sideways real text have no reliable positions on the original page, so they get no selectable text.
+        // OCR positions on a turned or tilted scan are mapped back onto the page.
         var words = layoutPage.IsRotated
             ? []
-            : layoutPage.AllWords().Where(word => word.IsPositioned).Select(word => new
+            : layoutPage.AllWords().Where(word => word.IsPositioned).Select(word =>
             {
-                text = word.Text,
-                left = word.Left,
-                top = word.Top,
-                width = word.Right - word.Left,
-                height = word.Bottom - word.Top
+                var (left, top, right, bottom) = layoutPage.ToPageBox(word);
+                return new { text = word.Text, left, top, width = right - left, height = bottom - top };
             }).ToList();
         return Ok(words);
     }

@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -6,6 +5,7 @@ using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.AcroForms;
 using PdfSharp.Pdf.IO;
+using PdfAI.API.Services.Ocr;
 using SkiaSharp;
 using PigDocument = UglyToad.PdfPig.PdfDocument;
 
@@ -37,10 +37,8 @@ public class PdfToolkitService
 {
     private const int RedactionDpi = 200;
     private const int RedactionJpegQuality = 85;
-    private const int SearchableDpi = 300;
     private const double RedactionPadding = 1.5;   // points
     private const double RenderSizeTolerance = 3;  // pixels
-    private static readonly TimeSpan OcrPageTimeout = TimeSpan.FromMinutes(2);
 
     private readonly PdfLayoutService _layout;
     private readonly PdfToolRunner _tools;
@@ -106,63 +104,49 @@ public class PdfToolkitService
 
     // ── Searchable PDF ───────────────────────────────────────────────
 
-    /// <summary>Adds selectable, searchable text to scanned pages. Pages that already have text are left as they are.</summary>
-    public async Task<SearchableResult> MakeSearchableAsync(byte[] pdfBytes, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Adds selectable, searchable text to scanned pages and to text inside pictures, as an invisible layer over the original page,
+    /// which stays exactly as it was. Text that's already selectable is left alone.
+    /// </summary>
+    public async Task<SearchableResult> MakeSearchableAsync(byte[] pdfBytes, CancellationToken cancellationToken = default) =>
+        await MakeSearchableAsync(pdfBytes, null, cancellationToken);
+
+    /// <param name="ocr">OCR engine and languages, or null for the server's settings.</param>
+    public async Task<SearchableResult> MakeSearchableAsync(byte[] pdfBytes, OcrOverrides? ocr, CancellationToken cancellationToken = default)
     {
-        var scanned = _layout.FindPagesNeedingOcr(pdfBytes);
-        if (scanned.Count == 0)
+        var pages = await _layout.ExtractAsync(pdfBytes, ExtractOptions.ForPositions(requireOcr: true, ocr), cancellationToken);
+        var ocrPages = pages
+            .Select(page => (page.Number, Words: PlaceOcrWords(page)))
+            .Where(page => page.Words.Count > 0)
+            .ToList();
+        if (ocrPages.Count == 0)
             return new SearchableResult(pdfBytes, 0);
 
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-searchable-");
-        try
-        {
-            var pdfPath = Path.Combine(tempDirectory.FullName, "input.pdf");
-            await File.WriteAllBytesAsync(pdfPath, pdfBytes, cancellationToken);
+        using var stream = new MemoryStream(pdfBytes);
+        using var document = PdfReader.Open(stream, PdfDocumentOpenMode.Modify);
+        var font = TextLayerWriter.CreateFont(document);
+        foreach (var (number, words) in ocrPages)
+            TextLayerWriter.AddText(document.Pages[number - 1], font, words);
 
-            var ocrPages = new ConcurrentDictionary<int, byte[]>();
-            var options = new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount / 2, 1, 8), CancellationToken = cancellationToken };
-            await Parallel.ForEachAsync(scanned, options, async (page, token) =>
-            {
-                var pageBase = Path.Combine(tempDirectory.FullName, $"page{page}");
-                await File.WriteAllBytesAsync($"{pageBase}.jpg", await _tools.RenderPageAsync(pdfPath, page, "jpg", SearchableDpi, cancellationToken: token), token);
-                await _tools.RunCheckedAsync(
-                    _tools.TesseractPath,
-                    [$"{pageBase}.jpg", pageBase, "--dpi", SearchableDpi.ToString(CultureInfo.InvariantCulture), "-l", "eng", "pdf"],
-                    OcrPageTimeout,
-                    new Dictionary<string, string> { ["OMP_THREAD_LIMIT"] = "1" },
-                    token);
-                ocrPages[page] = await File.ReadAllBytesAsync($"{pageBase}.pdf", token);
-            });
-
-            using var input = OpenForImport(pdfBytes);
-            using var output = new PdfDocument();
-            for (var page = 1; page <= input.PageCount; page++)
-            {
-                if (ocrPages.TryGetValue(page, out var ocrPage))
-                {
-                    using var ocrDocument = OpenForImport(ocrPage);
-                    output.AddPage(ocrDocument.Pages[0]);
-                }
-                else
-                {
-                    output.AddPage(input.Pages[page - 1]);
-                }
-            }
-
-            return new SearchableResult(Save(output), ocrPages.Count);
-        }
-        finally
-        {
-            tempDirectory.Delete(true);
-        }
+        return new SearchableResult(Save(document), ocrPages.Count);
     }
+
+    // Only words that OCR read get a text layer. Words with no reliable position, such as unmatched table text, are skipped.
+    private static List<PlacedWord> PlaceOcrWords(LayoutPage page) => page.AllWords()
+        .Where(word => word.Confidence is not null && word.IsPositioned)
+        .Select(word =>
+        {
+            var (x, y) = page.Frame?.ToPage(word.Left, word.Baseline) ?? (word.Left, word.Baseline);
+            return new PlacedWord(word.Text, x, y, word.Right - word.Left, word.FontSize, page.Frame?.TextAngle ?? 0);
+        })
+        .ToList();
 
     // ── Redaction ────────────────────────────────────────────────────
 
     /// <summary>
     /// Permanently removes matching text. Pages with a match are flattened to pictures with black boxes drawn on them,
     /// so the text isn't merely covered. Metadata, bookmarks and annotations are dropped from the whole document.
-    /// Text inside pictures on pages that have a normal text layer isn't detected.
+    /// Text inside pictures is found with OCR, so pictures with a match are covered too.
     /// </summary>
     public async Task<RedactionResult> RedactAsync(byte[] pdfBytes, IReadOnlyList<string> terms, bool matchCase = false, CancellationToken cancellationToken = default)
     {
@@ -170,7 +154,7 @@ public class PdfToolkitService
         if (cleaned.Count == 0)
             throw new ArgumentException("At least one term to redact is required.");
 
-        var pages = await _layout.ExtractAsync(pdfBytes, includeImages: false, requireOcr: true, cancellationToken);
+        var pages = await _layout.ExtractAsync(pdfBytes, ExtractOptions.ForPositions(requireOcr: true), cancellationToken);
         var matches = pages
             .Select(page => (Page: page, Words: FindRedactionMatches(page.AllWords(), cleaned, matchCase)))
             .Where(match => match.Words.Count > 0)
@@ -256,27 +240,30 @@ public class PdfToolkitService
     {
         using var source = SKBitmap.Decode(rendered);
         var scale = RedactionDpi / 72f;
-        if (Math.Abs(source.Width - page.Width * scale) > RenderSizeTolerance || Math.Abs(source.Height - page.Height * scale) > RenderSizeTolerance)
+        var (width, height) = (page.DisplayWidth, page.DisplayHeight);
+        if (Math.Abs(source.Width - width * scale) > RenderSizeTolerance || Math.Abs(source.Height - height * scale) > RenderSizeTolerance)
             throw new InvalidOperationException($"Page {page.Number} has a crop that can't be redacted safely.");
 
         using var surface = new SKCanvas(source);
         using var paint = new SKPaint { Color = SKColors.Black, Style = SKPaintStyle.Fill };
         foreach (var word in words)
         {
+            // OCR positions on a turned or tilted scan map back to the page as a box around the whole word.
+            var (left, top, right, bottom) = page.ToPageBox(word);
             surface.DrawRect(SKRect.Create(
-                (float)((word.Left - RedactionPadding) * scale),
-                (float)((word.Top - RedactionPadding) * scale),
-                (float)((word.Right - word.Left + RedactionPadding * 2) * scale),
-                (float)((word.Bottom - word.Top + RedactionPadding * 2) * scale)), paint);
+                (float)((left - RedactionPadding) * scale),
+                (float)((top - RedactionPadding) * scale),
+                (float)((right - left + RedactionPadding * 2) * scale),
+                (float)((bottom - top + RedactionPadding * 2) * scale)), paint);
         }
 
         using var encoded = source.Encode(SKEncodedImageFormat.Jpeg, RedactionJpegQuality);
         var newPage = output.AddPage();
-        newPage.Width = XUnit.FromPoint(page.Width);
-        newPage.Height = XUnit.FromPoint(page.Height);
+        newPage.Width = XUnit.FromPoint(width);
+        newPage.Height = XUnit.FromPoint(height);
         using var graphics = XGraphics.FromPdfPage(newPage);
         using var image = LoadImage(encoded.ToArray());
-        graphics.DrawImage(image, 0, 0, page.Width, page.Height);
+        graphics.DrawImage(image, 0, 0, width, height);
     }
 
     // ── Metadata ─────────────────────────────────────────────────────

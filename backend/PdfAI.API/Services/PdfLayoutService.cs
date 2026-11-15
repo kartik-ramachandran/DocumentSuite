@@ -5,40 +5,65 @@ using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
+using PdfAI.API.Services.Ocr;
 
 namespace PdfAI.API.Services;
 
-/// <summary>Reads each page's real text and images, using OCR for pages that have no text layer.</summary>
+/// <summary>What to read from a document, and how.</summary>
+/// <param name="IncludeImages">Also extract pictures and chart regions, for the Office conversions and JSON.</param>
+/// <param name="RequireOcr">Fail when a page needs OCR and it can't run. Otherwise that page keeps only its image.</param>
+/// <param name="ReadImageText">Also read text inside pictures on pages that have real text.</param>
+/// <param name="FindTables">Use the configured layout model to find tables on scanned pages.</param>
+public sealed record ExtractOptions(bool IncludeImages, bool RequireOcr, bool ReadImageText, bool FindTables, OcrOverrides? Ocr = null)
+{
+    /// <summary>Plain text, such as the OCR endpoint and AI review.</summary>
+    public static ExtractOptions ForText(OcrOverrides? ocr = null) => new(false, true, true, true, ocr);
+
+    /// <summary>Word, Excel and PowerPoint, which keep pictures as pictures, so the text in them isn't repeated.</summary>
+    public static ExtractOptions ForOffice(OcrOverrides? ocr = null) => new(true, false, false, true, ocr);
+
+    /// <summary>Structured JSON, which lists pictures and the text inside them.</summary>
+    public static ExtractOptions ForStructure(OcrOverrides? ocr = null) => new(true, false, true, true, ocr);
+
+    /// <summary>Word positions, for redaction, searchable PDFs and the viewer's text selection.</summary>
+    public static ExtractOptions ForPositions(bool requireOcr, OcrOverrides? ocr = null) => new(false, requireOcr, true, false, ocr);
+}
+
+/// <summary>Reads each page's real text and images, using OCR for pages that have no text layer and for text inside pictures.</summary>
 public partial class PdfLayoutService
 {
-    private const int OcrDpi = 300;
     private const int CropDpi = 150;
     private const int MinNativeLetters = 20;
     private const int MinScanWords = 15;
     private const int MinCurvesForChart = 20;
     private const double MinImageSide = 4;
-    private static readonly TimeSpan OcrPageTimeout = TimeSpan.FromMinutes(2);
+    private const double MinTextImageWidth = 40;    // points; smaller pictures rarely hold readable text
+    private const double MinTextImageHeight = 12;   // points
+    private const double MinTextImageArea = 2000;   // square points
+    private const int MaxTextImagesPerPage = 12;
+    private const double DuplicateOverlap = 0.3;    // share of an OCR word covered by real text that marks it as a repeat
 
     private readonly PdfToolRunner _tools;
+    private readonly OcrService _ocr;
     private readonly ILogger<PdfLayoutService> _logger;
 
-    public PdfLayoutService(PdfToolRunner tools, ILogger<PdfLayoutService> logger)
+    public PdfLayoutService(PdfToolRunner tools, OcrService ocr, ILogger<PdfLayoutService> logger)
     {
         _tools = tools;
+        _ocr = ocr;
         _logger = logger;
     }
 
-    /// <param name="includeImages">Also extract pictures and chart regions for the Office conversions.</param>
-    /// <param name="requireOcr">Fail when a page needs OCR and it can't run. Otherwise that page keeps only its image.</param>
-    public async Task<IReadOnlyList<LayoutPage>> ExtractAsync(byte[] pdfBytes, bool includeImages, bool requireOcr, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<LayoutPage>> ExtractAsync(byte[] pdfBytes, ExtractOptions extract, CancellationToken cancellationToken = default)
     {
+        var settings = _ocr.Resolve(extract.Ocr);
         var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-layout-");
         try
         {
             var pdfPath = Path.Combine(tempDirectory.FullName, "input.pdf");
             await File.WriteAllBytesAsync(pdfPath, pdfBytes, cancellationToken);
 
-            var scans = ReadPages(pdfBytes, includeImages, cancellationToken);
+            var scans = ReadPages(pdfBytes, extract.IncludeImages, extract.ReadImageText && settings.ReadTextInImages, cancellationToken);
 
             // Rendering and OCR are the slow steps, so they run in parallel, each with its own output files.
             var options = new ParallelOptions
@@ -50,10 +75,31 @@ public partial class PdfLayoutService
             {
                 foreach (var crop in scan.Crops)
                     scan.Images.Add(await RenderCropAsync(pdfPath, scan.Number, crop, token));
-                if (scan.NeedsOcr && await RunOcrAsync(pdfPath, scan, requireOcr, token) is { } ocrWords && ocrWords.Count >= scan.Words.Count)
+
+                if (scan.NeedsOcr)
                 {
-                    scan.Words = ocrWords;
-                    scan.WasOcr = true;
+                    var result = await _ocr.ReadPageAsync(pdfPath, scan.Number, (scan.Width, scan.Height), settings, extract.FindTables, extract.RequireOcr, token);
+                    if (result is not null && result.Words.Count >= scan.Words.Count)
+                    {
+                        scan.Words = result.Words;
+                        scan.Tables = result.Tables;
+                        scan.Frame = result.Frame;
+                        scan.Width = result.Frame.Width;
+                        scan.Height = result.Frame.Height;
+                        scan.OcrEngine = result.Engine;
+                        scan.Warnings.AddRange(result.Warnings);
+                        scan.WasOcr = true;
+                    }
+                }
+
+                foreach (var region in scan.TextImages)
+                {
+                    var words = await _ocr.ReadRegionAsync(pdfPath, scan.Number, region, settings, token);
+                    var added = words.Where(word => !CoveredByRealText(word, scan.Words)).ToList();
+                    if (added.Count == 0)
+                        continue;
+                    scan.ImageWords.AddRange(added);
+                    scan.OcrEngine ??= settings.Engine;
                 }
             });
 
@@ -66,9 +112,9 @@ public partial class PdfLayoutService
     }
 
     /// <summary>Returns all the document's text in reading order, with no length limit.</summary>
-    public async Task<string> ExtractTextAsync(byte[] pdfBytes, CancellationToken cancellationToken = default)
+    public async Task<string> ExtractTextAsync(byte[] pdfBytes, OcrOverrides? ocr = null, CancellationToken cancellationToken = default)
     {
-        var pages = await ExtractAsync(pdfBytes, includeImages: false, requireOcr: true, cancellationToken);
+        var pages = await ExtractAsync(pdfBytes, ExtractOptions.ForText(ocr), cancellationToken);
         var text = new StringBuilder();
 
         foreach (var page in pages)
@@ -108,7 +154,7 @@ public partial class PdfLayoutService
     private static bool NeedsOcr(Page page, int letterCount) =>
         letterCount < MinNativeLetters && (page.NumberOfImages > 0 || page.Paths.Count > 0);
 
-    private List<PageScan> ReadPages(byte[] pdfBytes, bool includeImages, CancellationToken cancellationToken)
+    private List<PageScan> ReadPages(byte[] pdfBytes, bool includeImages, bool readImageText, CancellationToken cancellationToken)
     {
         var scans = new List<PageScan>();
         using var document = PdfDocument.Open(pdfBytes);
@@ -131,6 +177,8 @@ public partial class PdfLayoutService
 
             if (includeImages || scan.NeedsOcr)
                 ReadImages(page, scan, frame);
+            if (readImageText && !scan.NeedsOcr && !scan.HasHiddenTextLayer && !frame.IsRotated)
+                FindTextImages(page, scan);
             if (includeImages && !frame.IsRotated)
                 FindChartRegion(page, scan);
 
@@ -272,89 +320,81 @@ public partial class PdfLayoutService
         return new LayoutImage(bytes, true, crop.Left, crop.Top, crop.Width, crop.Height);
     }
 
-    private async Task<List<LayoutWord>?> RunOcrAsync(string pdfPath, PageScan scan, bool requireOcr, CancellationToken cancellationToken)
+    // Pictures big enough to hold text, in page points. Their text is read with OCR and kept alongside the real text.
+    private void FindTextImages(Page page, PageScan scan)
     {
-        var tempDirectory = Directory.CreateTempSubdirectory("pdfsuite-ocr-");
+        IEnumerable<IPdfImage> images;
         try
         {
-            var imagePath = Path.Combine(tempDirectory.FullName, "page.png");
-            var outputBase = Path.Combine(tempDirectory.FullName, "page");
-            var pageImage = await _tools.RenderPageAsync(pdfPath, scan.Number, "png", OcrDpi, cancellationToken: cancellationToken);
-            await File.WriteAllBytesAsync(imagePath, pageImage, cancellationToken);
+            images = page.GetImages().ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not read images on page {Page}", page.Number);
+            return;
+        }
 
-            await _tools.RunCheckedAsync(
-                _tools.TesseractPath,
-                [imagePath, outputBase, "--dpi", OcrDpi.ToString(CultureInfo.InvariantCulture), "-l", "eng", "tsv"],
-                OcrPageTimeout,
-                new Dictionary<string, string> { ["OMP_THREAD_LIMIT"] = "1" },
-                cancellationToken);
+        foreach (var image in images.OrderByDescending(image => image.BoundingBox.Area).Take(MaxTextImagesPerPage))
+        {
+            var box = image.BoundingBox;
+            var left = Math.Max(box.Left, 0);
+            var right = Math.Min(box.Right, page.Width);
+            var top = Math.Max(page.Height - box.Top, 0);
+            var bottom = Math.Min(page.Height - box.Bottom, page.Height);
+            var (width, height) = (right - left, bottom - top);
+            if (image.IsImageMask || width < MinTextImageWidth || height < MinTextImageHeight || width * height < MinTextImageArea)
+                continue;
+            scan.TextImages.Add((left, top, width, height));
+        }
+    }
 
-            return ParseTesseractTsv(await File.ReadAllTextAsync($"{outputBase}.tsv", cancellationToken), OcrDpi);
-        }
-        catch (ToolNotAvailableException ex) when (!requireOcr)
+    // Real text drawn over a picture would otherwise be read twice.
+    private static bool CoveredByRealText(LayoutWord word, IReadOnlyList<LayoutWord> realWords)
+    {
+        var area = (word.Right - word.Left) * (word.Bottom - word.Top);
+        if (area <= 0)
+            return true;
+        foreach (var real in realWords)
         {
-            _logger.LogWarning(ex, "OCR is unavailable, so page {Page} keeps its image without editable text", scan.Number);
-            return null;
+            var overlapWidth = Math.Min(word.Right, real.Right) - Math.Max(word.Left, real.Left);
+            var overlapHeight = Math.Min(word.Bottom, real.Bottom) - Math.Max(word.Top, real.Top);
+            if (overlapWidth > 0 && overlapHeight > 0 && overlapWidth * overlapHeight >= area * DuplicateOverlap)
+                return true;
         }
-        catch (ToolNotAvailableException ex)
-        {
-            throw new InvalidOperationException($"Page {scan.Number} is scanned and needs OCR, but Tesseract is not installed on this server.", ex);
-        }
-        finally
-        {
-            tempDirectory.Delete(true);
-        }
+
+        return false;
     }
 
     /// <summary>Converts Tesseract's TSV output to words, in points, ignoring low-confidence noise.</summary>
-    public static List<LayoutWord> ParseTesseractTsv(string tsv, int dpi)
-    {
-        const int minConfidence = 30;
-        const int wordLevel = 5;
-        var scale = 72d / dpi;
-        var raw = new List<(string Key, string Text, double Left, double Right, double Bottom, double Height)>();
-
-        foreach (var row in tsv.Split('\n').Skip(1))
-        {
-            var fields = row.TrimEnd('\r').Split('\t');
-            if (fields.Length < 12
-                || fields[0] != wordLevel.ToString(CultureInfo.InvariantCulture)
-                || string.IsNullOrWhiteSpace(fields[11])
-                || !double.TryParse(fields[10], CultureInfo.InvariantCulture, out var confidence)
-                || confidence < minConfidence)
-            {
-                continue;
-            }
-
-            var left = double.Parse(fields[6], CultureInfo.InvariantCulture) * scale;
-            var top = double.Parse(fields[7], CultureInfo.InvariantCulture) * scale;
-            var width = double.Parse(fields[8], CultureInfo.InvariantCulture) * scale;
-            var height = double.Parse(fields[9], CultureInfo.InvariantCulture) * scale;
-            raw.Add(($"{fields[2]}.{fields[3]}.{fields[4]}", fields[11], left, left + width, top + height, height));
-        }
-
-        if (raw.Count == 0)
-            return [];
-
-        // A word's box height varies with its letters, so sizes and baselines are taken per line,
-        // then snapped to the page's typical size so body text forms paragraphs.
-        var lineSizes = raw.GroupBy(word => word.Key).ToDictionary(group => group.Key, group => group.Max(word => word.Height) * 1.15);
-        var pageSize = LayoutMath.Median(lineSizes.Values);
-        var lineBaselines = raw.GroupBy(word => word.Key).ToDictionary(group => group.Key, group => LayoutMath.Median(group.Select(word => word.Bottom)));
-
-        return raw.Select(word =>
-        {
-            var size = lineSizes[word.Key] <= pageSize * 1.4 ? pageSize : lineSizes[word.Key];
-            return new LayoutWord(word.Text, word.Left, word.Right, lineBaselines[word.Key], Math.Round(size * 2) / 2);
-        }).ToList();
-    }
+    public static List<LayoutWord> ParseTesseractTsv(string tsv, int dpi) =>
+        OcrService.ToLayoutWords(TesseractOcrEngine.ParseTsv(tsv), dpi, minConfidence: 0.3);
 
     private static LayoutPage BuildPage(PageScan scan)
     {
         var isScan = scan.HasHiddenTextLayer || (scan.WasOcr && scan.Words.Count >= MinScanWords);
         var coversPage = scan.ImageArea >= scan.Width * scan.Height * 0.6;
         var images = isScan && coversPage ? [] : scan.Images;
-        return new LayoutPage(scan.Number, scan.Width, scan.Height, PdfLayoutAnalyzer.BuildBlocks(scan.Words, images, scan.Width), scan.WasOcr, scan.IsRotated);
+
+        var words = scan.Words.Concat(scan.ImageWords).ToList();
+        IReadOnlyList<LayoutBlock> tables = [];
+        if (scan.Tables.Count > 0)
+        {
+            var merged = OcrTableMerger.Merge(words, scan.Tables);
+            words = merged.RemainingWords;
+            tables = merged.Tables;
+            scan.Warnings.AddRange(merged.Warnings);
+        }
+
+        return new LayoutPage(
+            scan.Number,
+            scan.Width,
+            scan.Height,
+            PdfLayoutAnalyzer.BuildBlocks(words, images, scan.Width, tables),
+            scan.WasOcr,
+            scan.IsRotated,
+            scan.Frame,
+            scan.OcrEngine,
+            scan.Warnings.Count > 0 ? scan.Warnings : null);
     }
 
     [GeneratedRegex("bold|black|heavy|demi|semibold", RegexOptions.IgnoreCase)]
@@ -411,8 +451,14 @@ public partial class PdfLayoutService
     private sealed class PageScan(int number, double width, double height)
     {
         public int Number { get; } = number;
-        public double Width { get; } = width;
-        public double Height { get; } = height;
+        public double Width { get; set; } = width;
+        public double Height { get; set; } = height;
+        public OcrFrame? Frame { get; set; }
+        public string? OcrEngine { get; set; }
+        public List<string> Warnings { get; } = [];
+        public List<OcrTableRegion> Tables { get; set; } = [];
+        public List<LayoutWord> ImageWords { get; } = [];
+        public List<(double Left, double Top, double Width, double Height)> TextImages { get; } = [];
         public bool NeedsOcr { get; init; }
         public bool IsRotated { get; init; }
         public bool HasHiddenTextLayer { get; init; }

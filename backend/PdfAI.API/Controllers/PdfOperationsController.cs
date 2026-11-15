@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PdfAI.API.Services;
+using PdfAI.API.Services.Ocr;
 
 namespace PdfAI.API.Controllers;
 
@@ -172,12 +173,16 @@ public class PdfOperationsController : PdfBaseController
         }
     }
 
+    /// <param name="file">The PDF.</param>
+    /// <param name="languages">OCR languages as Tesseract codes joined with +, such as eng+deu. Defaults to Ocr:Languages.</param>
+    /// <param name="engine">tesseract, or paddle when the OCR service is running. Defaults to Ocr:Engine.</param>
+    /// <param name="tables">none, structure or vl, the layout model that finds tables on scanned pages. Defaults to Ocr:Tables.</param>
     [HttpPost("ocr")]
-    public async Task<IActionResult> OcrPdf(IFormFile file)
+    public async Task<IActionResult> OcrPdf(IFormFile file, [FromForm] string? languages = null, [FromForm] string? engine = null, [FromForm] string? tables = null)
     {
         try
         {
-            var result = await _pdfService.OcrPdf(await ReadBytes(file), HttpContext.RequestAborted);
+            var result = await _pdfService.OcrPdf(await ReadBytes(file), new OcrOverrides(engine, languages, tables), HttpContext.RequestAborted);
             return File(System.Text.Encoding.UTF8.GetBytes(result), "text/plain", OutputName(file, ".txt"));
         }
         catch (Exception ex)

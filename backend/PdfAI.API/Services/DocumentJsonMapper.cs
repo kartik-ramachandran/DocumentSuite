@@ -12,6 +12,9 @@ public static class DocumentJsonMapper
             width = page.Width,
             height = page.Height,
             ocr = page.WasOcr,
+            ocrEngine = page.OcrEngine,
+            ocrConfidence = page.OcrConfidence,
+            ocrWarnings = page.OcrWarnings,
             blocks = page.Blocks.Select(block => ToBlock(block, includeImages)).ToList()
         }).ToList()
     };
@@ -30,7 +33,9 @@ public static class DocumentJsonMapper
             bold = AllWords(paragraph).All(word => word.Bold),
             italic = AllWords(paragraph).All(word => word.Italic),
             color = FirstWord(paragraph)?.ColorHex,
-            centered = paragraph.Centered
+            centered = paragraph.Centered,
+            confidence = Confidence(AllWords(paragraph)),
+            fromImage = AllWords(paragraph).All(word => word.FromImage)
         },
         TableBlock table => new
         {
@@ -38,7 +43,10 @@ public static class DocumentJsonMapper
             left = table.Left,
             top = table.Top,
             columnWidths = table.ColumnWidths,
-            rows = table.Rows.Select(row => row.Select(cell => cell.Text).ToList()).ToList()
+            rows = table.Rows.Select(row => row.Select(cell => cell.Text).ToList()).ToList(),
+            source = table.Source ?? "text",
+            unverifiedWords = table.Source is null ? (int?)null : table.UnverifiedWords,
+            confidence = Confidence(table.Rows.SelectMany(row => row).SelectMany(cell => cell.Words))
         },
         ImageBlock { Image: var image } => new
         {
@@ -58,4 +66,11 @@ public static class DocumentJsonMapper
         paragraph.Lines.SelectMany(line => line.Segments).SelectMany(segment => segment.Words);
 
     private static LayoutWord? FirstWord(ParagraphBlock paragraph) => AllWords(paragraph).FirstOrDefault();
+
+    // The mean OCR confidence from 0 to 1, or null for real text.
+    private static double? Confidence(IEnumerable<LayoutWord> words)
+    {
+        var scores = words.Where(word => word.Confidence is not null).Select(word => word.Confidence!.Value).ToList();
+        return scores.Count == 0 ? null : Math.Round(scores.Average(), 3);
+    }
 }

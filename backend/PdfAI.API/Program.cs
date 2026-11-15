@@ -3,6 +3,7 @@ using System.Text;
 using PdfAI.API.Mcp;
 using PdfAI.API.Middleware;
 using PdfAI.API.Services;
+using PdfAI.API.Services.Ocr;
 
 const string McpStdioFlag = "--mcp-stdio";
 const string McpRoute = "/mcp";
@@ -97,6 +98,11 @@ app.Run();
 static void AddPdfServices(IServiceCollection services)
 {
     services.AddScoped<PdfToolRunner>();
+    services.AddScoped<TesseractOcrEngine>();
+    services.AddScoped<IOcrEngine>(provider => provider.GetRequiredService<TesseractOcrEngine>());
+    services.AddHttpClient<SidecarOcrEngine>();
+    services.AddScoped<IOcrEngine>(provider => provider.GetRequiredService<SidecarOcrEngine>());
+    services.AddScoped<OcrService>();
     services.AddScoped<PdfLayoutService>();
     services.AddScoped<PdfCompressionService>();
     services.AddScoped<PdfToolkitService>();

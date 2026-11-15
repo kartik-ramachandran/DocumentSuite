@@ -26,3 +26,8 @@ appsettings.Development.json
 
 # MCP working folder
 workspace/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/

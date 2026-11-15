@@ -1,3 +1,4 @@
+using PdfAI.API.Services.Ocr;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 using PdfSharp.Pdf.Security;
@@ -189,10 +190,14 @@ public class PdfProcessingService
     }
 
     /// <summary>Returns a document's pages, paragraphs, tables and pictures as structured data.</summary>
-    public async Task<object> ConvertToStructuredData(string fileName, byte[] bytes, bool includeImages, CancellationToken cancellationToken = default)
+    public async Task<object> ConvertToStructuredData(string fileName, byte[] bytes, bool includeImages, CancellationToken cancellationToken = default) =>
+        await ConvertToStructuredData(fileName, bytes, includeImages, null, cancellationToken);
+
+    /// <param name="ocr">OCR engine, languages and table model for scanned pages, or null for the server's settings.</param>
+    public async Task<object> ConvertToStructuredData(string fileName, byte[] bytes, bool includeImages, OcrOverrides? ocr, CancellationToken cancellationToken = default)
     {
         var pdf = await ConvertAnyToPdf(fileName, bytes, cancellationToken);
-        var pages = await _layoutService.ExtractAsync(pdf, includeImages: true, requireOcr: false, cancellationToken);
+        var pages = await _layoutService.ExtractAsync(pdf, ExtractOptions.ForStructure(ocr), cancellationToken);
         return DocumentJsonMapper.ToJson(pages, includeImages);
     }
 
@@ -314,10 +319,12 @@ public class PdfProcessingService
         return outputStream.ToArray();
     }
 
-    public Task<string> OcrPdf(byte[] pdfBytes, CancellationToken cancellationToken = default)
-    {
-        return _layoutService.ExtractTextAsync(pdfBytes, cancellationToken);
-    }
+    public Task<string> OcrPdf(byte[] pdfBytes, CancellationToken cancellationToken = default) =>
+        OcrPdf(pdfBytes, null, cancellationToken);
+
+    /// <param name="ocr">OCR engine, languages and table model for scanned pages, or null for the server's settings.</param>
+    public Task<string> OcrPdf(byte[] pdfBytes, OcrOverrides? ocr, CancellationToken cancellationToken = default) =>
+        _layoutService.ExtractTextAsync(pdfBytes, ocr, cancellationToken);
 
     public byte[] UnlockPdf(byte[] pdfBytes, string? password = null)
     {

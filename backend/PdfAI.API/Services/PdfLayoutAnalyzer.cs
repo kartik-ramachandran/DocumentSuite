@@ -1,3 +1,5 @@
+using PdfAI.API.Services.Ocr;
+
 namespace PdfAI.API.Services;
 
 public sealed record LayoutWord(
@@ -10,7 +12,9 @@ public sealed record LayoutWord(
     bool Italic = false,
     string? FontName = null,
     string? ColorHex = null,
-    bool IsPositioned = true)
+    bool IsPositioned = true,
+    double? Confidence = null,
+    bool FromImage = false)
 {
     public double Top => Baseline - FontSize * 0.8;
     public double Bottom => Baseline + FontSize * 0.2;
@@ -54,7 +58,15 @@ public sealed record TableCell(IReadOnlyList<LayoutWord> Words)
 }
 
 /// <summary>Column widths are in points. Every row has one cell per column.</summary>
-public sealed record TableBlock(double Top, double Left, IReadOnlyList<double> ColumnWidths, IReadOnlyList<IReadOnlyList<TableCell>> Rows)
+/// <param name="Source">Where the table's structure came from: null for word positions, or a layout model.</param>
+/// <param name="UnverifiedWords">Words from a layout model that the OCR text doesn't contain.</param>
+public sealed record TableBlock(
+    double Top,
+    double Left,
+    IReadOnlyList<double> ColumnWidths,
+    IReadOnlyList<IReadOnlyList<TableCell>> Rows,
+    string? Source = null,
+    int UnverifiedWords = 0)
     : LayoutBlock(Top)
 {
     public double Bottom => Rows.SelectMany(row => row).SelectMany(cell => cell.Words).Select(word => word.Bottom).DefaultIfEmpty(Top).Max();
@@ -62,8 +74,39 @@ public sealed record TableBlock(double Top, double Left, IReadOnlyList<double> C
 
 public sealed record ImageBlock(LayoutImage Image) : LayoutBlock(Image.Top);
 
-public sealed record LayoutPage(int Number, double Width, double Height, IReadOnlyList<LayoutBlock> Blocks, bool WasOcr, bool IsRotated = false)
+/// <param name="Width">The width of the page as analysed. A scanned page that OCR turned upright swaps its width and height.</param>
+/// <param name="Frame">Maps an OCR page's straightened positions back to the page as displayed. Null for pages with real text.</param>
+/// <param name="OcrEngine">The engine that read the page, or null when no OCR ran.</param>
+/// <param name="OcrWarnings">Things to check, such as table text that the OCR engine and layout model disagree on.</param>
+public sealed record LayoutPage(
+    int Number,
+    double Width,
+    double Height,
+    IReadOnlyList<LayoutBlock> Blocks,
+    bool WasOcr,
+    bool IsRotated = false,
+    OcrFrame? Frame = null,
+    string? OcrEngine = null,
+    IReadOnlyList<string>? OcrWarnings = null)
 {
+    /// <summary>The page's size as displayed, which positions from <see cref="ToPageBox"/> are relative to.</summary>
+    public double DisplayWidth => Frame?.PageWidth ?? Width;
+    public double DisplayHeight => Frame?.PageHeight ?? Height;
+
+    /// <summary>The mean confidence, from 0 to 1, of the words OCR read on this page.</summary>
+    public double? OcrConfidence
+    {
+        get
+        {
+            var scores = AllWords().Where(word => word.Confidence is not null).Select(word => word.Confidence!.Value).ToList();
+            return scores.Count == 0 ? null : Math.Round(scores.Average(), 3);
+        }
+    }
+
+    /// <summary>Where a word sits on the displayed page, as the smallest upright box around it.</summary>
+    public (double Left, double Top, double Right, double Bottom) ToPageBox(LayoutWord word) =>
+        Frame?.ToPageBox(word.Left, word.Top, word.Right, word.Bottom) ?? (word.Left, word.Top, word.Right, word.Bottom);
+
     /// <summary>Every word on the page in reading order.</summary>
     public List<LayoutWord> AllWords()
     {
@@ -104,13 +147,20 @@ public static class PdfLayoutAnalyzer
     private const double MaxJustifiedGapRatio = 1.25; // widest gap / narrowest gap on a justified line
     private const double TableCellPadding = 12;       // points, so cell text fits inside default cell margins
 
-    public static IReadOnlyList<LayoutBlock> BuildBlocks(IReadOnlyList<LayoutWord> words, IReadOnlyList<LayoutImage> images, double pageWidth)
+    /// <param name="fixedBlocks">Blocks already built elsewhere, such as tables from a layout model, placed by their position.</param>
+    public static IReadOnlyList<LayoutBlock> BuildBlocks(IReadOnlyList<LayoutWord> words, IReadOnlyList<LayoutImage> images, double pageWidth, IReadOnlyList<LayoutBlock>? fixedBlocks = null)
     {
         var blocks = new List<LayoutBlock>();
         var lines = GroupIntoLines(words);
 
         foreach (var (regionLines, left, right) in SplitIntoRegions(lines, pageWidth))
             blocks.AddRange(BuildRegionBlocks(regionLines, left, right));
+
+        foreach (var block in (fixedBlocks ?? []).OrderBy(block => block.Top))
+        {
+            var index = blocks.FindIndex(existing => existing.Top > block.Top);
+            blocks.Insert(index < 0 ? blocks.Count : index, block);
+        }
 
         foreach (var image in images.OrderBy(image => image.Top))
         {

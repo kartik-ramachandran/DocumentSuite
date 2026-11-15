@@ -1,7 +1,5 @@
 using System.IO.Compression;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
-using Moq;
 using PdfAI.API.Services;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
@@ -16,8 +14,7 @@ public class PdfToolkitServiceTests
 
     public PdfToolkitServiceTests()
     {
-        var tools = new PdfToolRunner(TestServices.EmptyConfiguration());
-        _toolkit = new PdfToolkitService(new PdfLayoutService(tools, Mock.Of<ILogger<PdfLayoutService>>()), tools, Mock.Of<ILogger<PdfToolkitService>>());
+        _toolkit = TestServices.CreateToolkit();
     }
 
     [Fact]

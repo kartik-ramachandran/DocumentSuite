@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using PdfAI.API.Services;
+using PdfAI.API.Services.Ocr;
 
 namespace PdfAI.API.Controllers;
 
@@ -24,9 +25,17 @@ public class PdfToolsController : PdfBaseController
     /// <summary>Returns the pages, paragraphs, tables and pictures of a PDF, Office, HTML, Markdown, text or image file as JSON.</summary>
     /// <param name="file">The document.</param>
     /// <param name="includeImages">Include picture data as base64. Pictures can make the response large.</param>
+    /// <param name="languages">OCR languages as Tesseract codes joined with +, such as eng+deu. Defaults to Ocr:Languages.</param>
+    /// <param name="engine">tesseract, or paddle when the OCR service is running. Defaults to Ocr:Engine.</param>
+    /// <param name="tables">none, structure or vl, the layout model that finds tables on scanned pages. Defaults to Ocr:Tables.</param>
     [HttpPost("any-to-json")]
-    public Task<IActionResult> ToJson(IFormFile file, [FromForm] bool includeImages = false) => Run(async () =>
-        Ok(await _pdf.ConvertToStructuredData(file.FileName, await ReadBytes(file), includeImages, HttpContext.RequestAborted)));
+    public Task<IActionResult> ToJson(
+        IFormFile file,
+        [FromForm] bool includeImages = false,
+        [FromForm] string? languages = null,
+        [FromForm] string? engine = null,
+        [FromForm] string? tables = null) => Run(async () =>
+        Ok(await _pdf.ConvertToStructuredData(file.FileName, await ReadBytes(file), includeImages, new OcrOverrides(engine, languages, tables), HttpContext.RequestAborted)));
 
     /// <summary>Converts a PDF, Office, HTML, Markdown, text or image file to PDF, based on its file name.</summary>
     [HttpPost("any-to-pdf")]
@@ -45,10 +54,13 @@ public class PdfToolsController : PdfBaseController
     public Task<IActionResult> SplitRanges(IFormFile file, [FromForm] string? ranges = null, [FromForm] int? everyPages = null) => Run(async () =>
         File(_toolkit.SplitIntoFiles(await ReadBytes(file), ranges, everyPages), ZipType, OutputName(file, ".zip")));
 
+    /// <param name="file">The PDF.</param>
+    /// <param name="languages">OCR languages as Tesseract codes joined with +, such as eng+deu. Defaults to Ocr:Languages.</param>
+    /// <param name="engine">tesseract, or paddle when the OCR service is running. Defaults to Ocr:Engine.</param>
     [HttpPost("searchable")]
-    public Task<IActionResult> Searchable(IFormFile file) => Run(async () =>
+    public Task<IActionResult> Searchable(IFormFile file, [FromForm] string? languages = null, [FromForm] string? engine = null) => Run(async () =>
     {
-        var result = await _toolkit.MakeSearchableAsync(await ReadBytes(file), HttpContext.RequestAborted);
+        var result = await _toolkit.MakeSearchableAsync(await ReadBytes(file), new OcrOverrides(engine, languages), HttpContext.RequestAborted);
         Response.Headers["X-Ocr-Page-Count"] = result.OcrPages.ToString();
         return File(result.Pdf, PdfType, OutputName(file, ".pdf"));
     });
