@@ -130,6 +130,7 @@ export class PdfViewer {
     this.zoomSetting = this.settings.initialZoom;
     this.service = new ServiceClient(options.serviceUrl, options.serviceHeaders, options.serviceTransport);
     this.applyTheme(this.settings.theme);
+    this.host.dataset.reading = this.settings.readingMode;
     this.addStyles(VIEWER_CSS);
 
     this.root = element('div', 'pv-root');

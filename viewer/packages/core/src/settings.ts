@@ -36,6 +36,8 @@ export interface DocumentSuiteSettings {
 
   // Viewer
   theme: 'auto' | 'light' | 'dark';
+  /** dark turns white paper dark for reading in low light. The theme only changes the frame round the pages. Images are left as they are. */
+  readingMode: 'light' | 'dark';
   /** client renders in the browser. server has your API render pages, which needs serviceUrl. */
   mode: RenderMode;
   initialZoom: ZoomValue;
@@ -79,6 +81,7 @@ export const DEFAULT_SETTINGS: Readonly<DocumentSuiteSettings> = Object.freeze({
   allowRename: false,
 
   theme: 'auto',
+  readingMode: 'light',
   mode: 'client',
   initialZoom: 'fit-width',
   sidebarOpen: false,
@@ -207,6 +210,7 @@ export const SETTINGS_SCHEMA: readonly SettingGroup[] = [
     title: 'Viewer',
     settings: [
       { key: 'theme', label: 'Theme', options: [{ value: 'auto', label: 'Match the system' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }] },
+      { key: 'readingMode', label: 'Pages', options: [{ value: 'light', label: 'White paper' }, { value: 'dark', label: 'Dark, for low light' }] },
       { key: 'mode', label: 'Render pages', options: [{ value: 'client', label: 'In the browser' }, { value: 'server', label: 'On the server' }] },
       {
         key: 'initialZoom',

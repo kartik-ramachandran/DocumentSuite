@@ -379,7 +379,8 @@ File lists update straight away. Viewers read their settings when they're create
 | `allowDownload` | `true` | Shows download buttons and menu items |
 | `allowRename` | `false` | Asks what to call a file before downloading it |
 | **Viewer** | | |
-| `theme` | `'auto'` | `'auto'`, `'light'` or `'dark'` |
+| `theme` | `'auto'` | `'auto'`, `'light'` or `'dark'`: the toolbar and the frame round the pages |
+| `readingMode` | `'light'` | `'dark'` turns white paper dark for reading in low light. Images are left as they are |
 | `mode` | `'client'` | `'client'` renders in the browser. `'server'` has the API render pages |
 | `initialZoom` | `'fit-width'` | A number, `'fit-width'` or `'fit-page'` |
 | `sidebarOpen` | `false` | Opens the side panel on load |

@@ -245,6 +245,16 @@ test.describe('viewer', () => {
     expect(background).toBe('rgb(38, 43, 53)');
   });
 
+  test('dark reading mode turns the pages dark, and leaves them white by default', async ({ page }) => {
+    const filter = () => page.locator('.pv-page[data-page="1"] .pv-canvas').evaluate((canvas) => getComputedStyle(canvas).filter);
+
+    await openViewer(page, {});
+    expect(await filter()).toBe('none');
+
+    await openViewer(page, { readingMode: 'dark' });
+    expect(await filter()).toBe('invert(0.9) hue-rotate(180deg)');
+  });
+
   test('starting zoom applies', async ({ page }) => {
     await openViewer(page, { initialZoom: 1 });
     await expect.poll(async () => Math.round((await page.locator('.pv-page[data-page="1"]').boundingBox())!.width)).toBe(612);
@@ -306,7 +316,7 @@ test.describe('settings screen', () => {
     await expect(setting(page, 'clickAction')).toHaveValue('open');
     await expect(setting(page, 'allowRename')).not.toBeChecked();
     await expect(setting(page, 'modalResizable')).toBeChecked();
-    expect(await page.locator('[data-setting]').count()).toBe(29);
+    expect(await page.locator('[data-setting]').count()).toBe(30);
   });
 
   test('choosing the single click action takes effect immediately', async ({ page }) => {

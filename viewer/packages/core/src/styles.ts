@@ -30,6 +30,12 @@ export const VIEWER_CSS = `
   --pv-page-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
 }
 * { box-sizing: border-box; }
+/* Dark pages (readingMode: dark): white paper turns dark. hue-rotate puts colours back close to their own hue
+   after the invert. Images are shown outside .pv-canvas, so photos are never turned into negatives. */
+:host([data-reading='dark']) .pv-page,
+:host([data-reading='dark']) .pv-thumb canvas { background: #1a1a1a; }
+:host([data-reading='dark']) .pv-canvas,
+:host([data-reading='dark']) .pv-thumb canvas { filter: invert(0.9) hue-rotate(180deg); }
 .pv-root, .pv-toolbar, .pv-sidebar, .pv-tabs, .pv-searchbar, .pv-btn, .pv-input, .pv-select, .pv-dialog, .pv-thumb { transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease, box-shadow 180ms ease; }
 .pv-searchbar[data-open='true'], .pv-sidebar[data-open='true'] { animation: pv-reveal 180ms ease-out; }
 @keyframes pv-reveal { from { opacity: 0; } to { opacity: 1; } }
