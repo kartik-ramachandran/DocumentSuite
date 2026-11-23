@@ -7,6 +7,7 @@
 <meta name="description" content="Add a PDF and image viewer and editor to React, Vue or Angular apps. Convert, edit and OCR documents with a REST API, and connect AI clients over MCP. Free, MIT licensed and self-hosted.">
 <meta property="og:title" content="Document Suite: documents in your app, on your terms">
 <meta property="og:description" content="An open-source PDF viewer, editor, REST API and MCP server. MIT licensed and self-hosted. Try the viewer live, with nothing to install.">
+<meta name="theme-color" content="#fffaf0">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://kartik-ramachandran.github.io/DocumentSuite/">
 <meta property="og:image" content="https://kartik-ramachandran.github.io/DocumentSuite/og.png">
@@ -14,152 +15,190 @@
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --paper: #f6f1e4;
-  --card: #fcf9f0;
-  --ink: #16213a;
-  --body: #39415a;
+  --paper: #fffaf0;
+  --card: #ffffff;
+  --ink: #111322;
+  --body: #2c3045;
   --muted: #5d6272;
-  --line: #d9d1bc;
-  --accent: #a83f22;
-  --button: #16213a;
-  --button-text: #fbf8ef;
+  --line: #111322;
+  --soft: #ece3cf;
+  --accent: #ff5a1f;
+  --sun: #ffd23f;
+  --sky: #3d6bff;
+  --mint: #19c39a;
+  --pink: #ff7eb6;
   --code: #141b2d;
-  --code-text: #e6e9f2;
+  --code-text: #eef1fa;
   --code-muted: #9aa3b8;
-  --shadow: 0 18px 50px rgba(40, 34, 18, 0.16);
-  --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --display: 'Bricolage Grotesque', 'Inter', 'Segoe UI', sans-serif;
+  --serif: 'Newsreader', Georgia, serif;
   --sans: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #12151d;
-    --card: #1a1f2b;
-    --ink: #f1ece0;
-    --body: #c5c8d2;
-    --muted: #9ea3b1;
-    --line: #333a49;
-    --accent: #ec8a68;
-    --button: #f1ece0;
-    --button-text: #12151d;
-    --code: #0c0f16;
-    --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
-    color-scheme: dark;
-  }
-}
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 76px; }
-body { margin: 0; background: var(--paper); color: var(--body); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+body { margin: 0; background: var(--paper); color: var(--body); font: 16.5px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  background-image: radial-gradient(var(--soft) 1.2px, transparent 1.2px); background-size: 22px 22px; }
 img { display: block; max-width: 100%; height: auto; }
 a { color: inherit; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
-.wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
-em { color: var(--accent); font-style: italic; }
+:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; border-radius: 4px; }
+.wrap { width: min(1180px, 100% - 40px); margin-inline: auto; }
+em { font-style: italic; font-family: var(--serif); font-weight: 500; color: var(--ink);
+  background: linear-gradient(transparent 58%, var(--sun) 58%, var(--sun) 92%, transparent 92%); padding: 0 .08em; }
 
 /* Navigation */
-.nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--paper) 90%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-.nav .wrap { display: flex; align-items: center; gap: 24px; min-height: 60px; }
-.brand { display: flex; align-items: center; gap: 9px; color: var(--ink); font: 500 21px var(--serif); text-decoration: none; }
-.brand img { width: 26px; height: 26px; }
-.links { display: flex; gap: 20px; margin-right: auto; font-size: 14px; }
-.links a { color: var(--body); text-decoration: none; }
-.links a:hover { color: var(--accent); }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border: 1px solid var(--button); border-radius: 8px; background: var(--button); color: var(--button-text); font: 500 15px var(--sans); text-decoration: none; cursor: pointer; }
-.btn:hover { opacity: 0.88; }
-.btn.ghost { background: transparent; border-color: var(--line); color: var(--ink); }
-.btn.ghost:hover { border-color: var(--ink); opacity: 1; }
-.nav .btn { min-height: 38px; padding: 0 14px; font-size: 14px; }
+.nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 3px solid var(--line); }
+.nav .wrap { display: flex; align-items: center; gap: 24px; min-height: 66px; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--ink); font: 800 21px var(--display); text-decoration: none; letter-spacing: -.02em; }
+.brand img { width: 34px; height: 34px; padding: 4px; background: var(--sun); border: 3px solid var(--line); border-radius: 10px; transform: rotate(-6deg); transition: transform .3s; }
+.brand:hover img { transform: rotate(6deg) scale(1.08); }
+.links { display: flex; gap: 18px; margin-right: auto; font: 600 14px var(--sans); }
+.links a { color: var(--ink); text-decoration: none; position: relative; }
+.links a::after { content: ''; position: absolute; left: 0; right: 100%; bottom: -4px; height: 3px; background: var(--accent); transition: right .25s; }
+.links a:hover::after { right: 0; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border: 3px solid var(--line); border-radius: 14px;
+  background: var(--accent); color: #fff; font: 800 15px var(--sans); text-decoration: none; cursor: pointer; box-shadow: 5px 5px 0 var(--line); transition: transform .15s, box-shadow .15s; }
+.btn:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--line); }
+.btn:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--line); }
+.btn.ghost { background: #fff; color: var(--ink); }
+.nav .btn { min-height: 40px; padding: 0 14px; font-size: 14px; box-shadow: 3px 3px 0 var(--line); }
 
 /* Hero */
-.hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; padding: 72px 0 56px; }
-h1 em { display: block; white-space: nowrap; }
-h1 { margin: 0 0 20px; color: var(--ink); font: 400 clamp(44px, 6.2vw, 72px)/1.04 var(--serif); letter-spacing: -0.015em; }
-.lede { max-width: 34em; margin: 0 0 26px; font-size: 19px; line-height: 1.55; }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
-.facts { margin: 0; color: var(--muted); font: 13px/1.7 var(--mono); }
-.label { margin: 0 0 12px; color: var(--muted); font: 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.hero { position: relative; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; padding: 84px 0 60px; }
+.hero::before { content: ''; position: absolute; z-index: -1; width: 520px; height: 520px; right: -160px; top: -40px; border-radius: 50%;
+  background: conic-gradient(from 0deg, var(--sun), var(--pink), var(--sky), var(--mint), var(--sun)); filter: blur(70px); opacity: .45; animation: spin 18s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.kicker { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 22px; padding: 6px 14px; background: var(--mint); color: #fff; font: 800 13px var(--sans);
+  border: 3px solid var(--line); border-radius: 999px; transform: rotate(-2deg); box-shadow: 3px 3px 0 var(--line); }
+.kicker i { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+h1 { margin: 0 0 22px; color: var(--ink); font: 800 clamp(48px, 7vw, 88px)/.98 var(--display); letter-spacing: -.035em; }
+h1 em { display: inline-block; margin-top: 6px; white-space: nowrap; }
+.lede { max-width: 34em; margin: 0 0 28px; font-size: 19px; line-height: 1.55; }
+.actions { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 24px; }
+.facts { margin: 0; color: var(--muted); font: 13px/1.8 var(--mono); }
+.label { margin: 0 0 12px; color: var(--ink); font: 700 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.hero > div:last-child { transform: rotate(1.2deg); }
 
 /* Code */
-.code { position: relative; border-radius: 10px; background: var(--code); color: var(--code-text); font: 13px/1.65 var(--mono); }
+.code { position: relative; border: 3px solid var(--line); border-radius: 16px; background: var(--code); color: var(--code-text); font: 13px/1.7 var(--mono); box-shadow: 8px 8px 0 var(--sky); }
+.code::before { content: ''; display: block; height: 30px; border-bottom: 1px solid #2a3350;
+  background: radial-gradient(circle at 18px 15px, #ff5f57 5px, transparent 6px), radial-gradient(circle at 36px 15px, #febc2e 5px, transparent 6px), radial-gradient(circle at 54px 15px, #28c840 5px, transparent 6px); }
 .code pre { margin: 0; padding: 16px 18px; overflow-x: auto; tab-size: 2; }
 .code .c { color: var(--code-muted); }
-.copy { position: absolute; top: 8px; right: 8px; min-height: 30px; padding: 0 10px; border: 1px solid #39425a; border-radius: 6px; background: var(--code); color: var(--code-text); font: 12px var(--sans); cursor: pointer; }
-.copy:hover { background: #262e44; }
+.copy { position: absolute; top: 4px; right: 8px; min-height: 24px; padding: 0 10px; border: 2px solid #3a4566; border-radius: 8px; background: #1f2740; color: var(--code-text); font: 700 11px var(--sans); cursor: pointer; }
+.copy:hover { background: var(--accent); border-color: var(--accent); }
+.steps .code, #connect .code, #settings .code, #api .code, #ai .code { box-shadow: 6px 6px 0 var(--line); }
+
+/* Ticker */
+.ticker { overflow: hidden; border-block: 3px solid var(--line); background: var(--ink); color: var(--paper); margin: 0 calc(50% - 50vw); }
+.ticker div { display: flex; gap: 40px; width: max-content; padding: 14px 0; font: 800 20px var(--display); text-transform: uppercase; letter-spacing: .02em; animation: slide 32s linear infinite; }
+.ticker span::after { content: '✦'; margin-left: 40px; color: var(--sun); }
+@keyframes slide { to { transform: translateX(-50%); } }
 
 /* Sections */
-section { padding: 56px 0; }
-.head { padding-top: 26px; border-top: 1px solid var(--ink); margin-bottom: 26px; }
-.head .num { display: block; margin-bottom: 6px; color: var(--accent); font: 12px var(--mono); letter-spacing: 0.08em; }
-h2 { margin: 0 0 10px; color: var(--ink); font: 400 clamp(32px, 4vw, 44px)/1.12 var(--serif); letter-spacing: -0.01em; }
-.head p { max-width: 42em; margin: 0; font-size: 17px; }
-h3 { margin: 0 0 6px; color: var(--ink); font: 500 21px/1.25 var(--serif); }
+section { padding: 72px 0; }
+.head { margin-bottom: 34px; }
+.head .num { display: inline-block; margin-bottom: 14px; padding: 5px 12px; color: var(--ink); background: var(--sun); border: 3px solid var(--line); border-radius: 10px; font: 800 12px var(--mono); letter-spacing: .08em; box-shadow: 3px 3px 0 var(--line); }
+section:nth-of-type(3n+2) .head .num { background: var(--pink); }
+section:nth-of-type(3n) .head .num { background: #9fd9ff; }
+h2 { margin: 0 0 12px; color: var(--ink); font: 800 clamp(36px, 5vw, 58px)/1.02 var(--display); letter-spacing: -.03em; }
+.head p { max-width: 44em; margin: 0; font-size: 18px; }
+h3 { margin: 0 0 8px; color: var(--ink); font: 800 22px/1.2 var(--display); letter-spacing: -.015em; }
 
 /* Index strip */
-.strip { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 10px; background: var(--card); overflow: hidden; }
-.strip a { display: block; padding: 16px 18px; border-left: 1px solid var(--line); text-decoration: none; }
-.strip a:first-child { border-left: 0; }
-.strip a:hover { background: var(--paper); }
-.strip b { display: block; color: var(--ink); font: 500 15px var(--sans); }
-.strip span { color: var(--muted); font-size: 13px; line-height: 1.4; display: block; }
+.strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 8px; }
+.strip a { display: block; padding: 20px; border: 3px solid var(--line); border-radius: 18px; text-decoration: none; background: #fff; box-shadow: 6px 6px 0 var(--line); transition: transform .15s, box-shadow .15s; }
+.strip a:nth-child(1) { background: #fff1c2; } .strip a:nth-child(2) { background: #ffe0ee; }
+.strip a:nth-child(3) { background: #dbe6ff; } .strip a:nth-child(4) { background: #d4f6ea; }
+.strip a:hover { transform: translate(-3px, -3px) rotate(-1deg); box-shadow: 9px 9px 0 var(--line); }
+.strip b { display: block; color: var(--ink); font: 800 18px var(--display); margin-bottom: 4px; }
+.strip b::after { content: ' →'; color: var(--accent); }
+.strip span { color: var(--body); font-size: 14px; line-height: 1.45; display: block; }
 
 /* Live demo and screenshots */
-.frame { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: var(--shadow); }
-.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--line); color: var(--muted); font: 12px var(--mono); }
-.bar a { color: var(--accent); white-space: nowrap; }
-iframe { display: block; width: 100%; height: 640px; border: 0; background: var(--paper); }
-.note { margin: 14px 0 0; color: var(--muted); font-size: 14px; }
+.frame { overflow: hidden; border: 3px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: 10px 10px 0 var(--line); }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 16px; border-bottom: 3px solid var(--line); background: var(--sun); color: var(--ink); font: 700 12px var(--mono); }
+.bar a { color: var(--ink); white-space: nowrap; font-weight: 800; }
+iframe { display: block; width: 100%; height: 660px; border: 0; background: var(--paper); }
+.note { margin: 16px 0 0; color: var(--muted); font-size: 14.5px; }
+.note a { color: var(--accent); font-weight: 700; }
 
 /* Tabs */
-[role='tablist'] { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-[role='tab'] { min-height: 38px; padding: 0 15px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--body); font: 500 14px var(--sans); cursor: pointer; }
-[role='tab']:hover { border-color: var(--ink); }
-[role='tab'][aria-selected='true'] { border-color: var(--button); background: var(--button); color: var(--button-text); }
+[role='tablist'] { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+[role='tab'] { min-height: 42px; padding: 0 18px; border: 3px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink); font: 700 14px var(--sans); cursor: pointer; transition: transform .15s, box-shadow .15s; }
+[role='tab']:hover { transform: translateY(-2px); box-shadow: 0 4px 0 var(--line); }
+[role='tab'][aria-selected='true'] { background: var(--ink); color: #fff; box-shadow: 4px 4px 0 var(--accent); }
+[role='tabpanel'] { animation: rise .35s ease; }
 [role='tabpanel'][hidden] { display: none; }
-.shot figcaption { padding: 12px 16px; border-top: 1px solid var(--line); font-size: 15px; }
-.shot figcaption b { color: var(--ink); font-weight: 600; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+.shot figcaption { padding: 14px 18px; border-top: 3px solid var(--line); font-size: 15.5px; background: #fff; }
+.shot figcaption b { color: var(--ink); font-weight: 800; }
 figure { margin: 0; }
 
 /* Cards */
-.grid { display: grid; gap: 14px; }
+.grid { display: grid; gap: 20px; }
 .grid.three { grid-template-columns: repeat(3, 1fr); }
-.grid.two { grid-template-columns: repeat(2, 1fr); align-items: start; gap: 28px; }
-.card { padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
-.card p { margin: 0; font-size: 15px; }
+.grid.two { grid-template-columns: repeat(2, 1fr); align-items: start; gap: 34px; }
+.card { position: relative; padding: 24px; border: 3px solid var(--line); border-radius: 18px; background: #fff; box-shadow: 6px 6px 0 var(--line); transition: transform .15s, box-shadow .15s; }
+.card::before { content: ''; display: block; width: 44px; height: 8px; margin-bottom: 16px; border-radius: 4px; background: var(--accent); }
+.grid.three .card:nth-child(6n+2)::before { background: var(--sky); } .grid.three .card:nth-child(6n+3)::before { background: var(--mint); }
+.grid.three .card:nth-child(6n+4)::before { background: var(--pink); } .grid.three .card:nth-child(6n+5)::before { background: var(--sun); }
+.grid.three .card:nth-child(6n)::before { background: var(--ink); }
+.card:hover { transform: translate(-3px, -3px); box-shadow: 9px 9px 0 var(--line); }
+.card p { margin: 0; font-size: 15.5px; }
 .steps { margin: 0 0 18px; padding: 0; list-style: none; counter-reset: step; }
-.steps > li { position: relative; padding: 0 0 26px 44px; counter-increment: step; }
-.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--ink); border-radius: 50%; color: var(--ink); font: 13px var(--mono); }
-.steps p { margin: 0 0 10px; }
-table { width: 100%; border-collapse: collapse; font-size: 15px; }
-th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
-th { color: var(--muted); font: 12px var(--mono); letter-spacing: 0.04em; text-transform: uppercase; }
-td:first-child { color: var(--ink); font-weight: 500; }
-.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
-ul.plain { margin: 0; padding-left: 18px; }
-ul.plain li { margin-bottom: 8px; }
-.final { padding: 64px 0; text-align: center; border-top: 1px solid var(--ink); }
-.final h2 { margin-bottom: 12px; }
-.final p { max-width: 36em; margin: 0 auto 22px; font-size: 17px; }
+.steps > li { position: relative; padding: 0 0 28px 58px; counter-increment: step; }
+.steps > li::before { content: counter(step); position: absolute; left: 0; top: -4px; display: grid; place-items: center; width: 40px; height: 40px; border: 3px solid var(--line); border-radius: 12px; background: var(--sun); color: var(--ink); font: 800 17px var(--display); box-shadow: 3px 3px 0 var(--line); }
+.steps > li:not(:last-child)::after { content: ''; position: absolute; left: 19px; top: 44px; bottom: 6px; border-left: 3px dashed var(--line); }
+.steps p { margin: 0 0 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 15.5px; }
+th, td { padding: 13px 16px; border-bottom: 2px solid var(--soft); text-align: left; vertical-align: top; }
+th { color: var(--ink); background: var(--sun); border-bottom: 3px solid var(--line); font: 800 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+td:first-child { color: var(--ink); font-weight: 600; }
+td.yes { color: #0b8f6c; font-weight: 800; } td.no { color: #c2410c; font-weight: 800; }
+tbody tr:hover { background: #fff6dc; }
+.scroll { overflow-x: auto; border: 3px solid var(--line); border-radius: 18px; background: #fff; box-shadow: 8px 8px 0 var(--line); }
+ul.plain { margin: 0; padding: 0; list-style: none; }
+ul.plain li { position: relative; margin-bottom: 12px; padding-left: 30px; }
+ul.plain li::before { content: '✦'; position: absolute; left: 4px; color: var(--accent); font-weight: 800; }
+code { font-family: var(--mono); font-size: .9em; padding: 1px 6px; background: #fff1c2; border-radius: 6px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.final { position: relative; margin: 40px 0 72px; padding: 72px 32px; text-align: center; border: 3px solid var(--line); border-radius: 28px; overflow: hidden;
+  background: linear-gradient(135deg, #fff1c2, #ffe0ee 45%, #dbe6ff); box-shadow: 12px 12px 0 var(--line); }
+.final h2 { margin-bottom: 14px; }
+.final p { max-width: 36em; margin: 0 auto 26px; font-size: 18px; }
+.final p a { color: var(--accent); font-weight: 700; }
 .final .actions { justify-content: center; margin-bottom: 0; }
-footer { padding: 24px 0 36px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+footer { padding: 28px 0 40px; border-top: 3px solid var(--line); background: var(--ink); color: #d7dbea; font-size: 14px; }
 footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
-footer a { margin-left: 16px; }
+footer a { margin-left: 18px; color: var(--sun); font-weight: 700; }
 footer a:first-child { margin-left: 0; }
+
+/* Scroll reveal (only when JS runs, so the page is never blank without it) */
+.js .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+.js .reveal.in { opacity: 1; transform: none; }
 
 @media (max-width: 900px) {
   .links { display: none; }
   .nav .wrap { justify-content: space-between; }
-  .hero { grid-template-columns: minmax(0, 1fr); gap: 32px; padding: 44px 0 36px; }
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 36px; padding: 52px 0 40px; }
+  .hero > div:last-child { transform: none; }
+  h1 em { white-space: normal; }
   .strip { grid-template-columns: repeat(2, 1fr); }
-  .strip a:nth-child(odd) { border-left: 0; }
-  .strip a:nth-child(n + 3) { border-top: 1px solid var(--line); }
   .grid.three, .grid.two { grid-template-columns: minmax(0, 1fr); }
   iframe { height: 560px; }
 }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+@media (max-width: 520px) { .strip { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before { animation: none !important; transition: none !important; }
+  .js .reveal { opacity: 1; transform: none; }
+}
 </style>
 </head>
 <body>
@@ -185,6 +224,7 @@ footer a:first-child { margin-left: 0; }
   <div class="wrap">
     <header class="hero">
       <div>
+        <p class="kicker"><i></i>Version 0.2.0 · MIT · Self-hosted</p>
         <h1>Documents in your app, <em>on your terms.</em></h1>
         <p class="lede">An open-source PDF and image viewer and editor for React, Vue and Angular, a REST API for converting and editing documents, and an MCP server for AI clients. All of it runs on your own infrastructure.</p>
         <div class="actions">
@@ -221,13 +261,15 @@ export function App() {
       <a href="#ai"><b>MCP server</b><span>Document tools for AI clients</span></a>
     </nav>
 
+    <div class="ticker" aria-hidden="true"><div><span>PDF</span><span>Word</span><span>Excel</span><span>PowerPoint</span><span>PNG</span><span>JPEG</span><span>WebP</span><span>SVG</span><span>HTML</span><span>Markdown</span><span>OCR</span><span>Redact</span><span>Compare</span><span>MCP</span><span>PDF</span><span>Word</span><span>Excel</span><span>PowerPoint</span><span>PNG</span><span>JPEG</span><span>WebP</span><span>SVG</span><span>HTML</span><span>Markdown</span><span>OCR</span><span>Redact</span><span>Compare</span><span>MCP</span></div></div>
+
     <section id="try">
-      <div class="head">
+      <div class="head reveal">
         <span class="num">01 · TRY IT</span>
         <h2>The real viewer, <em>right here.</em></h2>
         <p>This isn't a video. Click a file to open it, draw on it, leave a comment and download the result. You can add your own PDFs and images too.</p>
       </div>
-      <div class="frame">
+      <div class="frame reveal">
         <div class="bar"><span>Runs in your browser. Your files aren't uploaded.</span><a href="demo/" target="_blank" rel="noopener">Open full screen ↗</a></div>
         <iframe src="demo/" title="Live demo of the Document Suite viewer, with sample files" loading="lazy"></iframe>
       </div>
@@ -235,7 +277,7 @@ export function App() {
     </section>
 
     <section id="viewer">
-      <div class="head">
+      <div class="head reveal">
         <span class="num">02 · THE VIEWER</span>
         <h2>Everything people expect, <em>inside your app.</em></h2>
         <p>Your users stay in your product. Zoom, thumbnails, search and printing are built in, and the optional editor adds highlights, drawing, text, comments, signatures and form filling, all saved into the PDF.</p>
@@ -282,7 +324,7 @@ export function App() {
     </section>
 
     <section id="install">
-      <div class="head">
+      <div class="head reveal">
         <span class="num">03 · ADD IT TO YOUR APP</span>
         <h2>Three steps, <em>no build tricks.</em></h2>
         <p>Install the packages, render the component, and you're done. PDFs and images work straight away with no server. The steps below are the same ones we test in new apps.</p>
@@ -417,7 +459,7 @@ docker compose up -d --build</code></pre></div>
     </section>
 
     <section id="settings">
-      <div class="head">
+      <div class="head reveal">
         <span class="num">04 · SETTINGS</span>
         <h2>One place to <em>change how it behaves.</em></h2>
         <p>What a click does, where the toolbar sits, whether downloads are allowed, the watermark: all of it is a setting. Set them in code, give people a ready-made screen, and keep the choices in the browser or on your server.</p>
@@ -448,25 +490,25 @@ await loadViewerSettings({
     </section>
 
     <section id="api">
-      <div class="head">
+      <div class="head reveal">
         <span class="num">05 · REST API</span>
         <h2>Document work, <em>without a third party.</em></h2>
         <p>More than 40 routes, which you can call with file uploads or base64 inside JSON. Your documents stay on your servers.</p>
       </div>
       <div class="grid three">
-        <div class="card"><h3>Convert</h3><p>Between PDF and Word, Excel, PowerPoint, HTML, Markdown, text and images. PDF to Office gives editable documents, not pictures of pages.</p></div>
-        <div class="card"><h3>Edit</h3><p>Merge, split, organize, rotate, crop, compress, watermark, and add page numbers or image stamps.</p></div>
-        <div class="card"><h3>Read</h3><p>OCR for scans and text in pictures, in many languages, with optional PaddleOCR models for hard tables. Searchable PDFs, document structure as JSON, and text and visual comparison.</p></div>
-        <div class="card"><h3>Protect</h3><p>Permanent redaction, passwords and metadata removal.</p></div>
-        <div class="card"><h3>Forms</h3><p>List and fill PDF form fields, and optionally flatten them.</p></div>
-        <div class="card"><h3>Your language</h3><p>It's plain HTTP, and the README has examples for curl, PowerShell, C#, Python and JavaScript.</p></div>
+        <div class="card reveal"><h3>Convert</h3><p>Between PDF and Word, Excel, PowerPoint, HTML, Markdown, text and images. PDF to Office gives editable documents, not pictures of pages.</p></div>
+        <div class="card reveal"><h3>Edit</h3><p>Merge, split, organize, rotate, crop, compress, watermark, and add page numbers or image stamps.</p></div>
+        <div class="card reveal"><h3>Read</h3><p>OCR for scans and text in pictures, in many languages, with optional PaddleOCR models for hard tables. Searchable PDFs, document structure as JSON, and text and visual comparison.</p></div>
+        <div class="card reveal"><h3>Protect</h3><p>Permanent redaction, passwords and metadata removal.</p></div>
+        <div class="card reveal"><h3>Forms</h3><p>List and fill PDF form fields, and optionally flatten them.</p></div>
+        <div class="card reveal"><h3>Your language</h3><p>It's plain HTTP, and the README has examples for curl, PowerShell, C#, Python and JavaScript.</p></div>
       </div>
       <br>
       <div class="code"><pre><code>curl -o report.pdf -F "files=@report.docx" http://localhost:8080/api/pdf/word-to-pdf</code></pre></div>
     </section>
 
     <section id="ai">
-      <div class="head">
+      <div class="head reveal">
         <span class="num">06 · AI CLIENTS</span>
         <h2>Document tools <em>that don't waste tokens.</em></h2>
         <p>The MCP server gives AI clients six tools. Files stay in a workspace folder and are referred to by name, so documents never pass through the model, and results come back as short summaries.</p>
@@ -496,7 +538,7 @@ await loadViewerSettings({
     </section>
 
     <section id="run">
-      <div class="head">
+      <div class="head reveal">
         <span class="num">07 · BEFORE YOU DEPLOY</span>
         <h2>What it needs, <em>plainly.</em></h2>
         <p>This is an early release, at version 0.2.0. Here's what works without a server, and what to take care of before going to production.</p>
@@ -505,12 +547,12 @@ await loadViewerSettings({
         <table>
           <thead><tr><th>You want</th><th>In the browser only</th><th>With the API</th></tr></thead>
           <tbody>
-            <tr><td>View, search and print PDFs and images</td><td>Yes</td><td>Yes</td></tr>
-            <tr><td>Annotate, sign and fill in forms</td><td>Yes</td><td>Yes</td></tr>
-            <tr><td>Open Word, Excel, PowerPoint, HTML, Markdown and text files</td><td>No</td><td>Yes</td></tr>
-            <tr><td>Document tools such as compress, OCR, redact and convert</td><td>No</td><td>Yes</td></tr>
-            <tr><td>Render pages on your server</td><td>No</td><td>Yes</td></tr>
-            <tr><td>Save settings on your server</td><td>No</td><td>Yes</td></tr>
+            <tr><td>View, search and print PDFs and images</td><td class="yes">✓ Yes</td><td class="yes">✓ Yes</td></tr>
+            <tr><td>Annotate, sign and fill in forms</td><td class="yes">✓ Yes</td><td class="yes">✓ Yes</td></tr>
+            <tr><td>Open Word, Excel, PowerPoint, HTML, Markdown and text files</td><td class="no">✕ No</td><td class="yes">✓ Yes</td></tr>
+            <tr><td>Document tools such as compress, OCR, redact and convert</td><td class="no">✕ No</td><td class="yes">✓ Yes</td></tr>
+            <tr><td>Render pages on your server</td><td class="no">✕ No</td><td class="yes">✓ Yes</td></tr>
+            <tr><td>Save settings on your server</td><td class="no">✕ No</td><td class="yes">✓ Yes</td></tr>
           </tbody>
         </table>
       </div>
@@ -521,7 +563,7 @@ await loadViewerSettings({
       </ul>
     </section>
 
-    <div class="final" id="help">
+    <div class="final reveal" id="help">
       <h2>Free to use. <em>Happy to help you set it up.</em></h2>
       <p>Document Suite is open for anyone to use, and there's nothing to buy. If you'd like a hand getting it running, email Kartik at <a href="mailto:kartikrama272@gmail.com?subject=Document%20Suite%20setup%20help">kartikrama272@gmail.com</a>.</p>
       <div class="actions">
@@ -581,6 +623,12 @@ document.querySelectorAll('.code').forEach((block) => {
   });
   block.append(button);
 });
+// Reveal sections as they scroll into view.
+document.documentElement.classList.add('js');
+const revealer = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => { if (entry.isIntersecting) { entry.target.classList.add('in'); revealer.unobserve(entry.target); } });
+}, { rootMargin: '0px 0px -8% 0px' });
+document.querySelectorAll('.reveal').forEach((el) => revealer.observe(el));
 </script>
 </body>
 </html>
